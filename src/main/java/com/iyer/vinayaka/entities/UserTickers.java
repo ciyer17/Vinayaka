@@ -7,9 +7,9 @@ import jakarta.persistence.Table;
 import lombok.Data;
 
 @Entity
-@Table(name = "ticker")
+@Table(name = "user_tickers")
 @Data
-public class Ticker {
+public class UserTickers {
 	@Id
 	@Column(nullable = false, columnDefinition = "varchar(30)")
 	private String symbol;
@@ -17,6 +17,9 @@ public class Ticker {
 	@Column(nullable = false, columnDefinition = "varchar(255)")
 	private String name;
 	
-	@Column(nullable = false)
-	private boolean is_favorite;
+	@Column(nullable = false, columnDefinition = "varchar(20)")
+	private String exchange;
+	
+	@Column(name = "is_favorite", nullable = false)
+	private boolean favorite;
 }
