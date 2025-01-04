@@ -19,8 +19,20 @@ public class UserSettings {
 	private String API_KEY;
 	
 	@NonNull
-	@Column(name = "api_secret", nullable = false)
+	@Column(name = "api_secret", nullable = false, columnDefinition = "varchar(255)")
 	private String API_SECRET;
+	
+	@NonNull
+	@Column(nullable = false, columnDefinition = "varchar(255)")
+	private String password;
+	
+	@NonNull
+	@Column(nullable = false, columnDefinition = "varchar(255)")
+	private String salt;
+	
+	@NonNull
+	@Column(nullable = false, columnDefinition = "varchar(255)")
+	private String iv;
 	
 	@NonNull
 	@Column(nullable = false, columnDefinition = "integer default 10")

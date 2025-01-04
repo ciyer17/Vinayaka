@@ -11,7 +11,6 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
 public class UserTickersService {
 	private final UserTickersRepository userTickersRepository;
 	
@@ -21,6 +20,7 @@ public class UserTickersService {
 	 * @param ticker The ticker to add.
 	 * @return The saved ticker object.
 	 */
+	@Transactional
 	public UserTickers addTicker(UserTickers ticker) {
 		return this.userTickersRepository.save(ticker);
 	}
@@ -90,6 +90,7 @@ public class UserTickersService {
 	 *
 	 * @param symbol The symbol of the ticker to delete.
 	 */
+	@Transactional
 	public void deleteTicker(String symbol) {
 		this.userTickersRepository.deleteById(symbol);
 	}
@@ -97,6 +98,7 @@ public class UserTickersService {
 	/**
 	 * Deletes all tickers stored by the user.
 	 */
+	@Transactional
 	public void deleteAllTickers() {
 		this.userTickersRepository.deleteAll();
 	}
