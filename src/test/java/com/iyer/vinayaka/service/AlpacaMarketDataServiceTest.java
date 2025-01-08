@@ -3,24 +3,30 @@ package com.iyer.vinayaka.service;
 import net.jacobpeterson.alpaca.AlpacaAPI;
 import net.jacobpeterson.alpaca.model.util.apitype.MarketDataWebsocketSourceType;
 import net.jacobpeterson.alpaca.model.util.apitype.TraderAPIEndpointType;
+import net.jacobpeterson.alpaca.openapi.marketdata.model.StockBar;
 import net.jacobpeterson.alpaca.openapi.marketdata.model.StockQuote;
 import net.jacobpeterson.alpaca.openapi.marketdata.model.StockTrade;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 
 import java.util.List;
 import java.util.Map;
 
 class AlpacaMarketDataServiceTest {
+	@Mock
+	private AlpacaHistoricalBarsDataService historicalBarsDataService;
 	private AlpacaMarketDataService marketDataService;
 	
 	@BeforeEach
 	void setUp() {
+		MockitoAnnotations.openMocks(this);
 		AlpacaAPI api = new AlpacaAPI("",
 				"",
 				TraderAPIEndpointType.LIVE, MarketDataWebsocketSourceType.IEX);
-		marketDataService = new AlpacaMarketDataService(api);
+		marketDataService = new AlpacaMarketDataService(api, historicalBarsDataService);
 	}
 	
 	@Test
@@ -119,6 +125,22 @@ class AlpacaMarketDataServiceTest {
 		Map<String, String> nameAndExchange = this.marketDataService.getTickerNameAndExchange(ticker);
 		
 		Assertions.assertEquals(0, nameAndExchange.size());
+	}
+	
+	@Test
+	void getSingleStockBarValid() {
+		String ticker = "PLTR";
+		StockBar trade = this.marketDataService.getSingleStockBar(ticker);
+		
+		Assertions.assertNotNull(trade);
+	}
+	
+	@Test
+	void getSingleStockBarInvalid() {
+		String ticker = "PLTRSJDFJ";
+		StockBar trade = this.marketDataService.getSingleStockBar(ticker);
+		
+		Assertions.assertNull(trade);
 	}
 	
 	@Test
