@@ -54,17 +54,17 @@ class AlpacaMarketDataServiceTest {
 	}
 	
 	@Test
-	void getSingleStockQuoteValid() {
+	void getLatestSingleStockQuoteValid() {
 		String ticker = "PLTR";
-		StockQuote quote = this.marketDataService.getSingleStockQuote(ticker);
+		StockQuote quote = this.marketDataService.getLatestSingleStockQuote(ticker);
 		
 		Assertions.assertNotNull(quote);
 	}
 	
 	@Test
-	void getSingleStockQuoteInvalid() {
+	void getLatestSingleStockQuoteInvalid() {
 		String ticker = "PLTRLSDJFOJOS";
-		StockQuote quote = this.marketDataService.getSingleStockQuote(ticker);
+		StockQuote quote = this.marketDataService.getLatestSingleStockQuote(ticker);
 		
 		Assertions.assertNull(quote);
 	}
@@ -94,17 +94,17 @@ class AlpacaMarketDataServiceTest {
 	}
 	
 	@Test
-	void getSingleStockTrade() {
+	void getLatestSingleStockTrade() {
 		String ticker = "PLTR";
-		StockTrade trade = this.marketDataService.getSingleStockTrade(ticker);
+		StockTrade trade = this.marketDataService.getLatestSingleStockTrade(ticker);
 		
 		Assertions.assertNotNull(trade);
 	}
 	
 	@Test
-	void getSingleStockTradeInvalid() {
+	void getLatestSingleStockTradeInvalid() {
 		String ticker = "PLTRSJDFJ";
-		StockTrade trade = this.marketDataService.getSingleStockTrade(ticker);
+		StockTrade trade = this.marketDataService.getLatestSingleStockTrade(ticker);
 		
 		Assertions.assertNull(trade);
 	}

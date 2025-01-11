@@ -58,7 +58,7 @@ public class AlpacaMarketDataService {
 	 * the ticker. If the ticker is not found, the exception message
 	 * is printed to the terminal and null is returned.
 	 */
-	public StockQuote getSingleStockQuote(String ticker) {
+	public StockQuote getLatestSingleStockQuote(String ticker) {
 		StockQuote quote = null;
 		try {
 			quote = this.alpacaAPI.marketData().stock().stockLatestQuoteSingle(
@@ -107,7 +107,7 @@ public class AlpacaMarketDataService {
 	 * the ticker. If the ticker is not found, the exception message
 	 * is printed to the terminal and null is returned.
 	 */
-	public StockTrade getSingleStockTrade(String ticker) {
+	public StockTrade getLatestSingleStockTrade(String ticker) {
 		StockTrade trade = null;
 		try {
 			trade = this.alpacaAPI.marketData().stock().stockLatestTradeSingle(
