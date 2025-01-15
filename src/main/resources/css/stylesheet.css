@@ -1,0 +1,26 @@
+.appBackground {
+    -fx-background-color: #302f2e;
+}
+
+.infoLabels {
+    -fx-text-fill: #ffffff;
+}
+
+.infoTextFields {
+    -fx-background-color: #ffffff;
+    -fx-cursor: text;
+    -fx-background-radius: 5px;
+}
+
+.buttonPositive {
+    -fx-background-color: #00ff00;
+    -fx-text-fill: #000000;
+    -fx-font-weight: normal;
+    -fx-font-size: 20;
+    -fx-background-radius: 12px;
+}
+
+.buttonNegative {
+    -fx-background-color: #ff0000;
+    -fx-text-fill: #000000;
+}

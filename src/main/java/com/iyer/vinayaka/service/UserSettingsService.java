@@ -42,47 +42,8 @@ public class UserSettingsService {
 	}
 	
 	/**
-	 * Retrieves the stored password, salt, and IV, all in Base64 encoding,
-	 * in that order.
+	 * Get the user preference object.
 	 *
-	 * @return A List of Strings containing the password, salt, and IV, in
-	 * that order. All the values are encoded in Base64.
-	 */
-	public List<String> getStoredSecret() {
-		Optional<UserSettings> settings = this.getUserSettings();
-		return Arrays.asList(this.getPassword(settings), this.getSalt(settings), this.getIV(settings));
-	}
-	
-	/**
-	 * Retrieves the stored password in Base64 encoding.
-	 *
-	 * @return The Base64 encoded password.
-	 */
-	private String getPassword(Optional<UserSettings> settings) {
-		return settings.map(UserSettings::getPassword).orElse("");
-	}
-	
-	/**
-	 * Retrieves the stored salt in Base64 encoding.
-	 *
-	 * @return The Base64 encoded salt.
-	 */
-	private String getSalt(Optional<UserSettings> settings) {
-		return settings.map(UserSettings::getSalt).orElse("");
-	}
-	
-	/**
-	 * Retrieves the stored IV in Base64 encoding.
-	 *
-	 * @return The Base64 encoded IV.
-	 */
-	private String getIV(Optional<UserSettings> settings) {
-		return settings.map(UserSettings::getIv).orElse("");
-	}
-	
-	/**
-	 /* Get the user preference object.
-	 
 	 * @return The user preference object. Empty if not found.
 	 */
 	public Optional<UserSettings> getUserSettings() {

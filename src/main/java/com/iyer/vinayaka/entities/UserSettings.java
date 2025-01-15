@@ -15,24 +15,12 @@ public class UserSettings {
 	private int id;
 	
 	@NonNull
-	@Column(name = "api_key", nullable = false, columnDefinition = "varchar(255)")
+	@Column(name = "api_key", nullable = false, columnDefinition = "varchar(20)")
 	private String API_KEY;
 	
 	@NonNull
-	@Column(name = "api_secret", nullable = false, columnDefinition = "varchar(255)")
+	@Column(name = "api_secret", nullable = false, columnDefinition = "varchar(40)")
 	private String API_SECRET;
-	
-	@NonNull
-	@Column(nullable = false, columnDefinition = "varchar(255)")
-	private String password;
-	
-	@NonNull
-	@Column(nullable = false, columnDefinition = "varchar(255)")
-	private String salt;
-	
-	@NonNull
-	@Column(nullable = false, columnDefinition = "varchar(255)")
-	private String iv;
 	
 	@NonNull
 	@Column(nullable = false, columnDefinition = "integer default 10")
@@ -43,6 +31,6 @@ public class UserSettings {
 	private Boolean dark_mode;
 	
 	@NonNull
-	@Column(nullable = false, columnDefinition = "varchar(255) default 'America/Los_Angeles'")
+	@Column(nullable = false, columnDefinition = "varchar(255) default 'America/New_York'")
 	private String timezone;
 }

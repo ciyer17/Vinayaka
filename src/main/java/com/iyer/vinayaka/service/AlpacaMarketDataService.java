@@ -6,6 +6,7 @@ import net.jacobpeterson.alpaca.openapi.marketdata.model.StockBar;
 import net.jacobpeterson.alpaca.openapi.marketdata.model.StockFeed;
 import net.jacobpeterson.alpaca.openapi.marketdata.model.StockQuote;
 import net.jacobpeterson.alpaca.openapi.marketdata.model.StockTrade;
+import net.jacobpeterson.alpaca.openapi.trader.model.Account;
 import net.jacobpeterson.alpaca.openapi.trader.model.Assets;
 import org.springframework.stereotype.Service;
 
@@ -21,6 +22,22 @@ public class AlpacaMarketDataService {
 	private final AlpacaHistoricalBarsDataService historicalBarsDataService;
 	private final String currency = "USD";
 	private final StockFeed feed = StockFeed.IEX;
+	
+	/**
+	 * Checks if the given API key and API secret are valid.
+	 *
+	 * @return True if the API Key and API Secret are valid, false otherwise.
+	 */
+	public static boolean checkAPIDetails(AlpacaAPI api) {
+		Account account;
+		try {
+			account = api.trader().accounts().getAccount();
+		} catch (net.jacobpeterson.alpaca.openapi.trader.ApiException e) {
+			account = null;
+		}
+		
+		return account != null;
+	}
 	
 	/**
 	 * Gets the latest stock quotes for the given tickers.

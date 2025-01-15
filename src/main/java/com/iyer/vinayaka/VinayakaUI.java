@@ -2,14 +2,15 @@ package com.iyer.vinayaka;
 
 import com.iyer.vinayaka.events.StageReadyEvent;
 import javafx.application.Application;
+import javafx.application.HostServices;
 import javafx.application.Platform;
 import javafx.stage.Stage;
 import org.springframework.boot.builder.SpringApplicationBuilder;
-import org.springframework.context.ApplicationContext;
 import org.springframework.context.ConfigurableApplicationContext;
 
 public class VinayakaUI extends Application {
 	private static ConfigurableApplicationContext context;
+	private static VinayakaUI instance;
 	
 	@Override
 	public void init() {
@@ -18,6 +19,7 @@ public class VinayakaUI extends Application {
 	
 	@Override
 	public void start(Stage stage) {
+		instance = this;
 		context.publishEvent(new StageReadyEvent(stage));
 	}
 	
@@ -27,7 +29,7 @@ public class VinayakaUI extends Application {
 		Platform.exit();
 	}
 	
-	public static ApplicationContext getContext() {
-		return context;
+	public static HostServices getService() {
+		return instance.getHostServices();
 	}
 }

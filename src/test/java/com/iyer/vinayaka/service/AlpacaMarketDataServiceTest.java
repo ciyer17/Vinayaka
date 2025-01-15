@@ -30,6 +30,28 @@ class AlpacaMarketDataServiceTest {
 	}
 	
 	@Test
+	void checkAPIDetailsValid() {
+		// Valid API Details
+		String apiKey = "";
+		String apiSecret = "";
+		AlpacaAPI api = new AlpacaAPI(apiKey, apiSecret,
+				TraderAPIEndpointType.LIVE, MarketDataWebsocketSourceType.IEX);
+		boolean valid = AlpacaMarketDataService.checkAPIDetails(api);
+		Assertions.assertTrue(valid);
+	}
+	
+	@Test
+	void checkAPIDetailsInvalid() {
+		// Invalid API Details
+		String apiKey = "ABCDEFGHIJKLMNOPQRST";
+		String apiSecret = "ABCDEFGHIJKLMNOPQRSTUVWXyz01234567890123";
+		AlpacaAPI api = new AlpacaAPI(apiKey, apiSecret,
+				TraderAPIEndpointType.LIVE, MarketDataWebsocketSourceType.IEX);
+		boolean valid = AlpacaMarketDataService.checkAPIDetails(api);
+		Assertions.assertFalse(valid);
+	}
+	
+	@Test
 	void getLatestStockQuotesAllValid() {
 		List<String> tickers = List.of("AAPL", "NVDA");
 		Map<String, StockQuote> quotes = this.marketDataService.getLatestStockQuotes(tickers);
