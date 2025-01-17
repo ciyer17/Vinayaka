@@ -27,7 +27,7 @@ public class UserSettings {
 	private Integer refresh_interval;
 	
 	@NonNull
-	@Column(nullable = false)
+	@Column(nullable = false, columnDefinition = "bool default true")
 	private Boolean dark_mode;
 	
 	@NonNull

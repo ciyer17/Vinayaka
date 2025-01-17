@@ -3,16 +3,20 @@ package com.iyer.vinayaka.service;
 import com.iyer.vinayaka.entities.UserTickers;
 import com.iyer.vinayaka.repository.UserTickersRepository;
 import jakarta.transaction.Transactional;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
 public class UserTickersService {
 	private final UserTickersRepository userTickersRepository;
+	
+	@Autowired
+	public UserTickersService(UserTickersRepository repository) {
+		this.userTickersRepository = repository;
+	}
 	
 	/**
 	 * Adds the specified ticker to the user's list of tickers.

@@ -3,6 +3,7 @@ package com.iyer.vinayaka.controller;
 import com.iyer.vinayaka.entities.UserSettings;
 import com.iyer.vinayaka.service.UserSettingsService;
 import com.iyer.vinayaka.util.UIUtils;
+import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
@@ -27,21 +28,27 @@ public class MainViewController implements Initializable {
 	@FXML
 	private Button secondPage;
 	
+	private final UserSettingsService userSettingsService;
+	private final UIUtils uiUtils;
+	
 	@Autowired
-	private UserSettingsService userSettingsService;
+	public MainViewController(UserSettingsService userSettingsService, UIUtils uiUtils) {
+		this.userSettingsService = userSettingsService;
+		this.uiUtils = uiUtils;
+	}
 	
 	@Override
 	public void initialize(URL url, ResourceBundle resourceBundle) {
-		UserSettings settings = null;
 		try {
-			settings = this.userSettingsService.getUserSettings().get();
+			UserSettings settings = this.userSettingsService.getUserSettings().get();
 			// Process
 			
 		} catch (NoSuchElementException n) {
-			// TODO: Make the UI for getting the user settings and transition on empty
-			// Process
-			
-			// this.userSettingsService.addUserSettings(settings);
+			// runLater() defers execution until after MainView is fully initialized. This prevents an
+			// overwrite where MainView is rendered, then APISecrets is rendered, then MainView is rendered again.
+			Platform.runLater(() -> {
+				this.uiUtils.navigateToSpecifiedPage("/view/APISecrets.fxml", this.getClass());
+			});
 		}
 		
 		// TODO:
@@ -57,7 +64,7 @@ public class MainViewController implements Initializable {
 	}
 	
 	public void navigateToAPISecretsPage(ActionEvent event) {
-		UIUtils.navigateToSpecifiedPage(event,"/view/APISecrets.fxml", this.getClass());
+		this.uiUtils.navigateToSpecifiedPage("/view/APISecrets.fxml", this.getClass());
 	}
 	
 	private void populateGrid(String[][] tickers) {

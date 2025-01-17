@@ -2,6 +2,7 @@ package com.iyer.vinayaka.controller;
 
 import com.iyer.vinayaka.VinayakaUI;
 import com.iyer.vinayaka.entities.UserSettings;
+import com.iyer.vinayaka.service.UserSettingsService;
 import com.iyer.vinayaka.util.DataHolder;
 import com.iyer.vinayaka.util.UIUtils;
 import javafx.event.ActionEvent;
@@ -25,6 +26,16 @@ public class APISecretsController {
 	@FXML
 	private Hyperlink alpacaHyperlink;
 	
+	private final UserSettingsService userSettingsService;
+	private final DataHolder dataHolder;
+	private final UIUtils uiUtils;
+	
+	public APISecretsController(UserSettingsService userSettingsService, DataHolder dataHolder, UIUtils uiUtils) {
+		this.userSettingsService = userSettingsService;
+		this.dataHolder = dataHolder;
+		this.uiUtils = uiUtils;
+	}
+	
 	public void initialize() {
 	
 	}
@@ -32,13 +43,18 @@ public class APISecretsController {
 	public void saveAPISecrets(ActionEvent event) {
 		String apiKey = this.apiKeyField.getText().toUpperCase();
 		String apiSecret = this.apiSecretField.getText();
-		DataHolder dataHolder = DataHolder.getInstance();
-		UserSettings settings = dataHolder.getUserSettings();
+		UserSettings settings = this.dataHolder.getUserSettings();
 		
-		boolean valid = UIUtils.validateAPIDetails(apiKey, apiSecret);
-		if (valid) {
+		boolean valid = uiUtils.validateAPIDetails(apiKey, apiSecret);
+		if (valid) { // Store the user given API Key and Secret and set others to default.
 			settings.setAPI_KEY(apiKey);
 			settings.setAPI_SECRET(apiSecret);
+			settings.setDark_mode(true);
+			settings.setTimezone("America/New_York");
+			settings.setRefresh_interval(10);
+			this.dataHolder.setUserSettings(settings);
+			this.userSettingsService.addUserSettings(settings);
+			this.uiUtils.navigateToSpecifiedPage("/view/MainView.fxml", this.getClass());
 		}
 	}
 	

@@ -3,7 +3,7 @@ package com.iyer.vinayaka.service;
 import com.iyer.vinayaka.entities.UserSettings;
 import com.iyer.vinayaka.repository.UserSettingsRepository;
 import jakarta.transaction.Transactional;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
@@ -11,9 +11,13 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
-@RequiredArgsConstructor
 public class UserSettingsService {
 	private final UserSettingsRepository userSettingsRepository;
+	
+	@Autowired
+	public UserSettingsService(UserSettingsRepository repository) {
+		this.userSettingsRepository = repository;
+	}
 	
 	/**
 	 * User settings. Only one user settings object is allowed,
@@ -47,7 +51,8 @@ public class UserSettingsService {
 	 * @return The user preference object. Empty if not found.
 	 */
 	public Optional<UserSettings> getUserSettings() {
-		return this.userSettingsRepository.findById(0);
+		List<UserSettings> settings = this.userSettingsRepository.findAll();
+		 return settings.stream().findFirst();
 	}
 	
 	/**

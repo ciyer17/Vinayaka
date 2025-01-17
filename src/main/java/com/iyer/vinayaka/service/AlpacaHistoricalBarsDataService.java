@@ -1,12 +1,12 @@
 package com.iyer.vinayaka.service;
 
-import lombok.RequiredArgsConstructor;
 import net.jacobpeterson.alpaca.AlpacaAPI;
 import net.jacobpeterson.alpaca.openapi.marketdata.model.Sort;
 import net.jacobpeterson.alpaca.openapi.marketdata.model.StockAdjustment;
 import net.jacobpeterson.alpaca.openapi.marketdata.model.StockBar;
 import net.jacobpeterson.alpaca.openapi.marketdata.model.StockFeed;
 import net.jacobpeterson.alpaca.openapi.trader.model.Calendar;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.*;
@@ -15,15 +15,19 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
 public class AlpacaHistoricalBarsDataService {
 	private final AlpacaAPI alpacaAPI;
+	
 	private final String currency = "USD";
 	private final long historicalDataLimit = 10000;
-	
 	private final String tz = "America/New_York";
 	private final ZoneId zoneId = ZoneId.of(tz);
 	private final ZoneOffset zoneOffset = ZonedDateTime.now(zoneId).getOffset();
+	
+	@Autowired
+	public AlpacaHistoricalBarsDataService(AlpacaAPI api) {
+		this.alpacaAPI = api;
+	}
 	
 	/**
 	 * Gets the historical 1-day stock bars for the given ticker.

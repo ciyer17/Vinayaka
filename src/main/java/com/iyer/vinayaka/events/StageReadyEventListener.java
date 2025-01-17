@@ -1,8 +1,10 @@
 package com.iyer.vinayaka.events;
 
+import com.iyer.vinayaka.util.DataHolder;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Component;
@@ -12,14 +14,19 @@ import java.io.IOException;
 @Component
 public class StageReadyEventListener implements ApplicationListener<StageReadyEvent> {
 	private final ApplicationContext context;
+	private final DataHolder dataHolder;
 	
-	public StageReadyEventListener(ApplicationContext context) {
+	@Autowired
+	public StageReadyEventListener(ApplicationContext context, DataHolder holder) {
 		this.context = context;
+		this.dataHolder = holder;
 	}
 	
 	@Override
 	public void onApplicationEvent(StageReadyEvent event) {
 		Stage stage = event.getStage();
+		dataHolder.setContext(this.context);
+		dataHolder.setStage(stage);
 		FXMLLoader loader = new FXMLLoader(getClass().getResource("/view/MainView.fxml"));
 		loader.setControllerFactory(this.context::getBean);
 		try {

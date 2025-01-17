@@ -1,6 +1,5 @@
 package com.iyer.vinayaka.service;
 
-import lombok.RequiredArgsConstructor;
 import net.jacobpeterson.alpaca.AlpacaAPI;
 import net.jacobpeterson.alpaca.openapi.marketdata.model.StockBar;
 import net.jacobpeterson.alpaca.openapi.marketdata.model.StockFeed;
@@ -8,6 +7,7 @@ import net.jacobpeterson.alpaca.openapi.marketdata.model.StockQuote;
 import net.jacobpeterson.alpaca.openapi.marketdata.model.StockTrade;
 import net.jacobpeterson.alpaca.openapi.trader.model.Account;
 import net.jacobpeterson.alpaca.openapi.trader.model.Assets;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -15,13 +15,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-@RequiredArgsConstructor
 @Service
 public class AlpacaMarketDataService {
 	private final AlpacaAPI alpacaAPI;
 	private final AlpacaHistoricalBarsDataService historicalBarsDataService;
+	
 	private final String currency = "USD";
 	private final StockFeed feed = StockFeed.IEX;
+	
+	@Autowired
+	public AlpacaMarketDataService(AlpacaAPI api, AlpacaHistoricalBarsDataService dataService) {
+		this.alpacaAPI = api;
+		this.historicalBarsDataService = dataService;
+	}
 	
 	/**
 	 * Checks if the given API key and API secret are valid.
