@@ -21,6 +21,9 @@
 }
 
 .buttonNegative {
-    -fx-background-color: #ff0000;
+    -fx-background-color: #F8847C;
     -fx-text-fill: #000000;
+    -fx-font-weight: normal;
+    -fx-font-size: 20;
+    -fx-background-radius: 12px;
 }

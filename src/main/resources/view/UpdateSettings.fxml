@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.*?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.text.*?>
+<ScrollPane fx:id="preferenceRootPane" prefHeight="720.0" prefWidth="1280.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.iyer.vinayaka.controller.UpdateSettingsController">
+   <content>
+      <AnchorPane prefHeight="720.0" prefWidth="1280.0" styleClass="appBackground" stylesheets="@../css/stylesheet.css">
+         <children>
+            <Label layoutX="534.0" layoutY="35.0" styleClass="infoLabels" text="Preferences">
+               <font>
+                  <Font size="40.0" />
+               </font>
+            </Label>
+            <Label layoutX="447.0" layoutY="134.0" styleClass="infoLabels" text="API Key">
+               <font>
+                  <Font size="25.0" />
+               </font>
+            </Label>
+            <Label layoutX="445.0" layoutY="229.0" styleClass="infoLabels" text="API Secret">
+               <font>
+                  <Font size="25.0" />
+               </font>
+            </Label>
+            <Label layoutX="448.0" layoutY="417.0" styleClass="infoLabels" text="Timezone">
+               <font>
+                  <Font size="25.0" />
+               </font>
+            </Label>
+            <Label layoutX="445.0" layoutY="324.0" styleClass="infoLabels" text="Dark Mode?">
+               <font>
+                  <Font size="25.0" />
+               </font>
+            </Label>
+            <Button fx:id="preferenceUpdate" layoutX="788.0" layoutY="618.0" minHeight="40.0" minWidth="100.0" mnemonicParsing="false" onAction="#updateSettings" prefHeight="38.0" prefWidth="88.0" styleClass="buttonPositive" text="Update">
+               <cursor>
+                  <Cursor fx:constant="HAND" />
+               </cursor></Button>
+            <Button fx:id="preferenceCancel" layoutX="425.0" layoutY="618.0" minHeight="40.0" minWidth="90.0" mnemonicParsing="false" onAction="#cancelUpdate" prefHeight="38.0" prefWidth="88.0" styleClass="buttonNegative" text="Cancel">
+               <cursor>
+                  <Cursor fx:constant="HAND" />
+               </cursor></Button>
+            <TextField fx:id="preferenceAPIKey" layoutX="684.0" layoutY="139.0" promptText="New API Key" styleClass="infoTextFields">
+               <cursor>
+                  <Cursor fx:constant="TEXT" />
+               </cursor></TextField>
+            <TextField fx:id="preferenceAPISecret" layoutX="684.0" layoutY="234.0" promptText="New API Secret" styleClass="infoTextFields">
+               <cursor>
+                  <Cursor fx:constant="TEXT" />
+               </cursor></TextField>
+            <CheckBox fx:id="darkModePreference" layoutX="684.0" layoutY="329.0" mnemonicParsing="false" selected="true" textFill="WHITE">
+               <cursor>
+                  <Cursor fx:constant="HAND" />
+               </cursor></CheckBox>
+            <ChoiceBox fx:id="localTimeZone" layoutX="684.0" layoutY="422.0" prefWidth="150.0">
+               <cursor>
+                  <Cursor fx:constant="HAND" />
+               </cursor></ChoiceBox>
+            <Label layoutX="448.0" layoutY="510.0" styleClass="infoLabels" text="Refresh Interval">
+               <font>
+                  <Font size="25.0" />
+               </font>
+            </Label>
+            <ChoiceBox fx:id="refreshInterval" layoutX="684.0" layoutY="515.0" prefWidth="150.0">
+               <cursor>
+                  <Cursor fx:constant="HAND" />
+               </cursor>
+            </ChoiceBox>
+         </children>
+      </AnchorPane>
+   </content>
+</ScrollPane>

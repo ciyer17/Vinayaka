@@ -85,76 +85,24 @@ public class UserSettingsService {
 	}
 	
 	/**
-	 * Update the Alpaca API Key and Secret pair.
+	 * Update the user settings.
 	 *
-	 * @param apiKey The Alpaca API Key.
-	 * @param apiSecret The Alpaca API Secret.
-	 * @return The updated user settings object. Null if not found.
-	 */
-	@Transactional
-	public UserSettings updateAPISettings(String apiKey, String apiSecret) {
-		Optional<UserSettings> settings = this.getUserSettings();
-		if (settings.isPresent()) {
-			UserSettings userSettings = settings.get();
-			userSettings.setAPI_KEY(apiKey);
-			userSettings.setAPI_SECRET(apiSecret);
-			return this.userSettingsRepository.save(userSettings);
-		}
-		
-		return null;
-	}
-	
-	/**
-	 * Update the refresh interval.
+	 * @param apiKey The new Alpaca API key.
+	 * @param apiSecret The new Alpaca API Secret.
+	 * @param interval The new refresh interval.
+	 * @param darkModePreference The new dark mode preference.
+	 * @param tz The new local timezone.
 	 *
-	 * @param interval The new refresh interval, in seconds.
-	 * @return The updated user settings object. Null if not found.
+	 * @return The updated UserSettings object. Null if user settings weren't already initialized.
 	 */
-	@Transactional
-	public UserSettings updateRefreshInterval(Integer interval) {
-		Optional<UserSettings> settings = this.getUserSettings();
-		if (settings.isPresent()) {
-			UserSettings userSettings = settings.get();
-			userSettings.setRefresh_interval(interval);
-			return this.userSettingsRepository.save(userSettings);
-		}
+	public UserSettings updateSettings(UserSettings settings, String apiKey, String apiSecret, Integer interval,
+									   Boolean darkModePreference, String tz) {
 		
-		return null;
-	}
-	
-	/**
-	 * Update the dark mode preference.
-	 *
-	 * @param darkMode True for dark mode, and false for light mode.
-	 * @return The updated user settings object. Null if not found.
-	 */
-	@Transactional
-	public UserSettings updateDarkMode(Boolean darkMode) {
-		Optional<UserSettings> settings = this.getUserSettings();
-		if (settings.isPresent()) {
-			UserSettings userSettings = settings.get();
-			userSettings.setDark_mode(darkMode);
-			return this.userSettingsRepository.save(userSettings);
-		}
-		
-		return null;
-	}
-	
-	/**
-	 * Update the timezone.
-	 *
-	 * @param timezone The new timezone. Must be in IANA timezone format.
-	 * @return The updated user settings object. Null if not found.
-	 */
-	@Transactional
-	public UserSettings updateTimezone(String timezone) {
-		Optional<UserSettings> settings = this.getUserSettings();
-		if (settings.isPresent()) {
-			UserSettings userSettings = settings.get();
-			userSettings.setTimezone(timezone);
-			return this.userSettingsRepository.save(userSettings);
-		}
-		
-		return null;
+		settings.setAPI_KEY(apiKey);
+		settings.setAPI_SECRET(apiSecret);
+		settings.setRefresh_interval(interval);
+		settings.setDark_mode(darkModePreference);
+		settings.setTimezone(tz);
+		return this.userSettingsRepository.save(settings);
 	}
 }

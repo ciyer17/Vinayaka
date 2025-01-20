@@ -10,26 +10,25 @@ import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.Hyperlink;
 import javafx.scene.control.TextField;
+import javafx.scene.layout.AnchorPane;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
+
+import java.util.TimeZone;
 
 @Controller
 public class APISecretsController {
-	@FXML
-	private TextField apiKeyField;
-	
-	@FXML
-	private TextField apiSecretField;
-	
-	@FXML
-	private Button apiSecretsSaveButton;
-	
-	@FXML
-	private Hyperlink alpacaHyperlink;
+	@FXML private AnchorPane apiSecretsRootPane;
+	@FXML private TextField apiKeyField;
+	@FXML private TextField apiSecretField;
+	@FXML private Button apiSecretsSaveButton;
+	@FXML private Hyperlink alpacaHyperlink;
 	
 	private final UserSettingsService userSettingsService;
 	private final DataHolder dataHolder;
 	private final UIUtils uiUtils;
 	
+	@Autowired
 	public APISecretsController(UserSettingsService userSettingsService, DataHolder dataHolder, UIUtils uiUtils) {
 		this.userSettingsService = userSettingsService;
 		this.dataHolder = dataHolder;
@@ -50,7 +49,8 @@ public class APISecretsController {
 			settings.setAPI_KEY(apiKey);
 			settings.setAPI_SECRET(apiSecret);
 			settings.setDark_mode(true);
-			settings.setTimezone("America/New_York");
+			String localTimezone = TimeZone.getDefault().getID();
+			settings.setTimezone(localTimezone);
 			settings.setRefresh_interval(10);
 			this.dataHolder.setUserSettings(settings);
 			this.userSettingsService.addUserSettings(settings);
