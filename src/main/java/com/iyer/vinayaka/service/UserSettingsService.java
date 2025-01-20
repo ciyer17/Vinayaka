@@ -2,9 +2,9 @@ package com.iyer.vinayaka.service;
 
 import com.iyer.vinayaka.entities.UserSettings;
 import com.iyer.vinayaka.repository.UserSettingsRepository;
-import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Arrays;
 import java.util.List;
@@ -95,6 +95,7 @@ public class UserSettingsService {
 	 *
 	 * @return The updated UserSettings object. Null if user settings weren't already initialized.
 	 */
+	@Transactional
 	public UserSettings updateSettings(UserSettings settings, String apiKey, String apiSecret, Integer interval,
 									   Boolean darkModePreference, String tz) {
 		

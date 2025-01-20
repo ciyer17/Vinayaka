@@ -18,6 +18,13 @@ import java.util.regex.Pattern;
 
 @Component
 public class UIUtils {
+	public static final String MAIN_VIEW = "/view/MainView.fxml";
+	public static final String UPDATE_SETTINGS_VIEW = "/view/UpdateSettings.fxml";
+	public static final String ENTER_API_SECRETS_VIEW = "/view/APISecrets.fxml";
+	
+	public static final String DARK_MODE_IMG = "/icons/settings-dark-mode.png";
+	public static final String LIGHT_MODE_IMG = "/icons/settings-light-mode.png";
+	
 	private final DataHolder dataHolder;
 	
 	@Autowired

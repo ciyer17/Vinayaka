@@ -1,6 +1,7 @@
 package com.iyer.vinayaka.events;
 
 import com.iyer.vinayaka.util.DataHolder;
+import com.iyer.vinayaka.util.UIUtils;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
@@ -27,7 +28,7 @@ public class StageReadyEventListener implements ApplicationListener<StageReadyEv
 		Stage stage = event.getStage();
 		dataHolder.setContext(this.context);
 		dataHolder.setStage(stage);
-		FXMLLoader loader = new FXMLLoader(getClass().getResource("/view/MainView.fxml"));
+		FXMLLoader loader = new FXMLLoader(getClass().getResource(UIUtils.MAIN_VIEW));
 		loader.setControllerFactory(this.context::getBean);
 		try {
 			stage.setScene(new Scene(loader.load()));

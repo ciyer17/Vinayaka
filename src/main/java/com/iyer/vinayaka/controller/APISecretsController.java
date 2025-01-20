@@ -35,10 +35,6 @@ public class APISecretsController {
 		this.uiUtils = uiUtils;
 	}
 	
-	public void initialize() {
-	
-	}
-	
 	public void saveAPISecrets(ActionEvent event) {
 		String apiKey = this.apiKeyField.getText().toUpperCase();
 		String apiSecret = this.apiSecretField.getText();
@@ -54,7 +50,7 @@ public class APISecretsController {
 			settings.setRefresh_interval(10);
 			this.dataHolder.setUserSettings(settings);
 			this.userSettingsService.addUserSettings(settings);
-			this.uiUtils.navigateToSpecifiedPage("/view/MainView.fxml", this.getClass());
+			this.uiUtils.navigateToSpecifiedPage(UIUtils.MAIN_VIEW, this.getClass());
 		}
 	}
 	

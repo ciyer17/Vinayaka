@@ -45,19 +45,7 @@ public class MainViewController implements Initializable {
 			UserSettings settings = this.userSettingsService.getUserSettings().get();
 			this.dataHolder.setUserSettings(settings);
 			
-			Image darkMode = new Image(Objects.requireNonNull(getClass().
-					getResourceAsStream("/icons/settings-dark-mode.png")));
-			Image lightMode = new Image(Objects.requireNonNull(getClass().
-					getResourceAsStream("/icons/settings-light-mode.png")));
-			
-			System.out.println("Loading dark mode image: " + getClass().getResource("/icons/settings-dark-mode.png"));
-			System.out.println("Loading light mode image: " + getClass().getResource("/icons/settings-light-mode.png"));
-			
-			if (settings.getDark_mode()) {
-				this.settingsImageView.setImage(darkMode);
-			} else {
-				this.settingsImageView.setImage(lightMode);
-			}
+			this.setBackground(settings.getDark_mode());
 			// Process
 			
 		} catch (NoSuchElementException n) {
@@ -81,11 +69,28 @@ public class MainViewController implements Initializable {
 	}
 	
 	public void navigateToAPISecretsPage(ActionEvent event) {
-		this.uiUtils.navigateToSpecifiedPage("/view/APISecrets.fxml", this.getClass());
+		this.uiUtils.navigateToSpecifiedPage(UIUtils.ENTER_API_SECRETS_VIEW, this.getClass());
 	}
 	
 	public void navigateToSettingsPage(MouseEvent event) {
-		this.uiUtils.navigateToSpecifiedPage("/view/UpdateSettings.fxml", this.getClass());
+		this.uiUtils.navigateToSpecifiedPage(UIUtils.UPDATE_SETTINGS_VIEW, this.getClass());
+	}
+	
+	private void setBackground(boolean darkMode) {
+		Image darkCog = new Image(Objects.requireNonNull(getClass().
+				getResourceAsStream(UIUtils.DARK_MODE_IMG)));
+		Image lightCog = new Image(Objects.requireNonNull(getClass().
+				getResourceAsStream(UIUtils.LIGHT_MODE_IMG)));
+		
+		if (darkMode) {
+			this.settingsImageView.setImage(darkCog);
+			this.tickerGrid.getStyleClass().removeAll("appBackground", "appBackgroundLight");
+			this.tickerGrid.getStyleClass().add("appBackground");
+		} else {
+			this.settingsImageView.setImage(lightCog);
+			this.tickerGrid.getStyleClass().removeAll("appBackground", "appBackgroundLight");
+			this.tickerGrid.getStyleClass().add("appBackgroundLight");
+		}
 	}
 	
 	private void populateGrid(String[][] tickers) {
