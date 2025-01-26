@@ -52,7 +52,6 @@ public class UpdateSettingsController implements Initializable {
 		this.refreshInterval.setItems(FXCollections.observableList(possibleRefreshIntervals));
 		
 		this.settings = this.dataHolder.getUserSettings();
-		System.out.println(this.settings);
 		
 		this.preferenceAPIKey.setText(this.settings.getAPI_KEY());
 		this.preferenceAPISecret.setText(this.settings.getAPI_SECRET());
@@ -99,12 +98,12 @@ public class UpdateSettingsController implements Initializable {
 		this.preferenceAnchorPane.getStyleClass().removeAll("appBackground", "appBackgroundLight");
 		this.preferenceAnchorPane.getStyleClass().add(darkMode ? "appBackground" : "appBackgroundLight");
 		
-		this.labelPane.getChildren().parallelStream().map(node -> (Label) node).forEach(label -> {
+		this.labelPane.getChildren().stream().map(node -> (Label) node).forEach(label -> {
 			label.getStyleClass().removeAll("infoLabels", "infoLabelsLight");
 			label.getStyleClass().add(darkMode ? "infoLabels" : "infoLabelsLight");
 		});
 		
-		this.textFieldPane.getChildren().parallelStream().map(node -> (TextField) node).forEach(textField -> {
+		this.textFieldPane.getChildren().stream().map(node -> (TextField) node).forEach(textField -> {
 			textField.getStyleClass().removeAll("infoTextFields", "infoTextFieldsLight");
 			textField.getStyleClass().add(darkMode ? "infoTextFields" : "infoTextFieldsLight");
 		});

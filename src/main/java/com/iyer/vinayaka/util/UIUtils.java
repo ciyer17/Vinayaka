@@ -24,6 +24,8 @@ public class UIUtils {
 	
 	public static final String DARK_MODE_IMG = "/icons/settings-dark-mode.png";
 	public static final String LIGHT_MODE_IMG = "/icons/settings-light-mode.png";
+	public static final String DARK_MODE_BG = "appBackground";
+	public static final String LIGHT_MODE_BG = "appBackgroundLight";
 	
 	private final DataHolder dataHolder;
 	

@@ -1,9 +1,27 @@
 .appBackground {
     -fx-background-color: #302f2e;
+    -fx-background: #302f2e;
 }
 
 .appBackgroundLight {
     -fx-background-color: #ffffff;
+    -fx-background: #ffffff;
+}
+
+.buttonPositive {
+    -fx-background-color: #00ff00;
+    -fx-text-fill: #000000;
+    -fx-font-weight: normal;
+    -fx-font-size: 20;
+    -fx-background-radius: 12px;
+}
+
+.buttonNegative {
+    -fx-background-color: #ff6f61;
+    -fx-text-fill: #000000;
+    -fx-font-weight: normal;
+    -fx-font-size: 20;
+    -fx-background-radius: 12px;
 }
 
 .infoLabels {
@@ -30,18 +48,17 @@
     -fx-text-fill: #ffffff;
 }
 
-.buttonPositive {
-    -fx-background-color: #00ff00;
-    -fx-text-fill: #000000;
-    -fx-font-weight: normal;
-    -fx-font-size: 20;
-    -fx-background-radius: 12px;
+.tickerPositive {
+    -fx-text-fill: #4CAF50;
+    -fx-font-size: 25;
 }
 
-.buttonNegative {
-    -fx-background-color: #F8847C;
-    -fx-text-fill: #000000;
-    -fx-font-weight: normal;
-    -fx-font-size: 20;
-    -fx-background-radius: 12px;
+.tickerNegative {
+    -fx-text-fill: #ff6f61;
+    -fx-font-size: 25;
+}
+
+.tickerZero {
+    -fx-text-fill: #b0b0b0;
+    -fx-font-size: 25;
 }
