@@ -192,6 +192,19 @@ public class AlpacaMarketDataService {
 	}
 	
 	/**
+	 * Gets the price change percentages for the given tickers.
+	 *
+	 * @param tickers The tickers whose price change percentages are to be calculated.
+	 * @param latestTrades The latest trades data for the tickers whose change percentages are required.
+	 *
+	 * @return A map of tickers to their price change percentages.
+	 */
+	public Map<String, Double> getYesterdaysHistoricalBars(List<String> tickers,
+														   Map<String, List<StockTrade>> latestTrades) {
+		return this.historicalBarsDataService.getLatestPriceChangePercentages(tickers, latestTrades);
+	}
+	
+	/**
 	 * Gets the historical 1-day stock bars for the given ticker.
 	 *
 	 * @param ticker The ticker whose 1-day bars are to be fetched.
@@ -199,7 +212,7 @@ public class AlpacaMarketDataService {
 	 * @return A list of StockBar objects representing the historical 1-day bars.
 	 * If the ticker is not found, null is returned.
 	 */
-	public List<StockBar> getHistorical1DStockBars(String ticker) {
+	public List<StockBar> get1DHistoricalBars(String ticker) {
 		return historicalBarsDataService.get1DHistoricalStockBars(ticker);
 	}
 	
