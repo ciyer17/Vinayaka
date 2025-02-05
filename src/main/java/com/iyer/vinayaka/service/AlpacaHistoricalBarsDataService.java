@@ -1,15 +1,20 @@
 package com.iyer.vinayaka.service;
 
 import net.jacobpeterson.alpaca.AlpacaAPI;
-import net.jacobpeterson.alpaca.openapi.marketdata.model.*;
+import net.jacobpeterson.alpaca.openapi.marketdata.ApiException;
+import net.jacobpeterson.alpaca.openapi.marketdata.model.Sort;
+import net.jacobpeterson.alpaca.openapi.marketdata.model.StockAdjustment;
+import net.jacobpeterson.alpaca.openapi.marketdata.model.StockBar;
+import net.jacobpeterson.alpaca.openapi.marketdata.model.StockFeed;
 import net.jacobpeterson.alpaca.openapi.trader.model.Calendar;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.*;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -33,54 +38,94 @@ class AlpacaHistoricalBarsDataService {
 	 * Gets the change percentage of the given tickers compared to the last trading day.
 	 *
 	 * @param tickersToGetDataFor The tickers whose change percentage has to be calculated.
-	 * @param latestTrades The latest trade data for all the tickers whose price change is being requested.
 	 *
-	 * @return A Map of ticker symbols to their respective price change percentages.
+	 * @return An array list of map of the latest bars and the price change percentages. The first map
+	 * is a {@code Map<String, List<StockBar>>} which is the latest bars, and the second map is a
+	 * {@code Map<String, Double>} which is the price change percentages. Cast it accordingly.
+	 * If there's an error, an empty (array)list is returned.
 	 */
-	public Map<String, Double> getLatestPriceChangePercentages(List<String> tickersToGetDataFor,
-														 Map<String, List<StockTrade>> latestTrades) {
-		
+	public List<Map<String, ?>> getLatestPriceChangePercentages(List<String> tickersToGetDataFor) {
 		LocalDate startDay = LocalDate.now().minusDays(7);
 		LocalDate today = LocalDate.now();
-		LocalTime fromTime = LocalTime.of(19, 59, 0);
-		LocalTime toTime = LocalTime.of(20, 0, 0);
+		LocalTime fromTime = LocalTime.of(15, 59, 0);
+		LocalTime toTime = LocalTime.of(16, 0, 0);
 		
-		OffsetDateTime offsetStartTime = OffsetDateTime.of(startDay, fromTime, ZoneOffset.UTC);
-		OffsetDateTime offsetEndTime = OffsetDateTime.of(today, toTime, ZoneOffset.UTC);
+		OffsetDateTime yesterdaysOffsetStartTime = OffsetDateTime.of(startDay, fromTime, ZoneOffset.UTC);
+		OffsetDateTime yesterdaysOffsetEndTime = OffsetDateTime.of(today, toTime, ZoneOffset.UTC);
 		
 		Map<String, List<StockBar>> yesterdaysBars;
-		Map<String, Double> priceChangePercentages = new HashMap<>();
+		Map<String, List<StockBar>> latestBars;
+		Map<String, Double> priceChangePercentages;
+		List<Map<String, ?>> priceChangeAndTradesList = new ArrayList<>();
 		try {
-			startDay = this.getStartDay(offsetStartTime, offsetEndTime);
+			List<LocalDate> dates = this.getLastTwoTradingDays(yesterdaysOffsetStartTime, yesterdaysOffsetEndTime);
+			LocalDate secondLastTradingDay = dates.getFirst();
+			LocalDate lastTradingDay = dates.getLast();
+			
+			LocalTime lastTradingDayFromTime;
+			LocalTime lastTradingDayEndTime;
+			
+			if (lastTradingDay.equals(LocalDate.now())) {
+				boolean isAfterMarketOpen = OffsetDateTime.of(lastTradingDay, LocalTime.now(), zoneOffset).
+						isAfter(OffsetDateTime.of(lastTradingDay, LocalTime.of(9, 45), zoneOffset));
+				boolean isBeforeMarketClose = OffsetDateTime.of(lastTradingDay, LocalTime.now(), zoneOffset).
+						isBefore(OffsetDateTime.of(lastTradingDay, LocalTime.of(16, 15), zoneOffset));
+				boolean isAfterMarketClose = OffsetDateTime.of(lastTradingDay, LocalTime.now(), zoneOffset).
+						isAfter(OffsetDateTime.of(lastTradingDay, LocalTime.of(16, 15), zoneOffset));
+				// Intraday information
+				if (isAfterMarketOpen && isBeforeMarketClose) {
+					
+					lastTradingDayFromTime = LocalTime.now().minusMinutes(16);
+					lastTradingDayEndTime = LocalTime.now().minusMinutes(15);
+				} else {
+					lastTradingDayFromTime = LocalTime.of(15, 59, 0);
+					lastTradingDayEndTime = LocalTime.of(16, 0, 0);
+				}
+			} else {
+				lastTradingDayFromTime = LocalTime.of(15, 59, 0);
+				lastTradingDayEndTime = LocalTime.of(16, 0, 0);
+			}
+			
+			OffsetDateTime lastTradingDayOffsetStartTime = OffsetDateTime.of(lastTradingDay, lastTradingDayFromTime, zoneOffset);
+			OffsetDateTime lastTradingDayOffsetEndTime = OffsetDateTime.of(lastTradingDay, lastTradingDayEndTime, zoneOffset);
 			
 			// Update the time range to match the New York time zone
-			offsetStartTime = OffsetDateTime.of(startDay, fromTime, zoneOffset);
-			offsetEndTime = OffsetDateTime.of(today, toTime, zoneOffset);
+			yesterdaysOffsetStartTime = OffsetDateTime.of(secondLastTradingDay, fromTime, zoneOffset);
+			yesterdaysOffsetEndTime = OffsetDateTime.of(secondLastTradingDay, toTime, zoneOffset);
 			
-			yesterdaysBars = this.alpacaAPI.marketData().stock().stockBars(
-					String.join(",", tickersToGetDataFor), "1D",
-					offsetStartTime, offsetEndTime, this.historicalDataLimit, StockAdjustment.ALL,null,
-					StockFeed.SIP, this.currency, null, Sort.ASC).getBars();
+			String tickers = String.join(",", tickersToGetDataFor);
+			
+			yesterdaysBars = this.alpacaAPI.marketData().stock().stockBars(tickers, "1Min", yesterdaysOffsetStartTime,
+					yesterdaysOffsetEndTime, this.historicalDataLimit, StockAdjustment.ALL,null, StockFeed.SIP,
+					this.currency, null, Sort.ASC).getBars();
+			
+			latestBars = this.alpacaAPI.marketData().stock().stockBars(tickers, "1Min", lastTradingDayOffsetStartTime,
+					lastTradingDayOffsetEndTime, this.historicalDataLimit, StockAdjustment.ALL, null, StockFeed.SIP,
+					this.currency, null, Sort.ASC).getBars();
 			
 			// The Stream API takes the keySet() (which returns a Set<String> in this case) for all the lambda operations.
 			priceChangePercentages = yesterdaysBars.keySet().parallelStream()
 					.filter(ticker -> yesterdaysBars.get(ticker) != null && !yesterdaysBars.get(ticker).isEmpty()
-							&& latestTrades.get(ticker) != null && !latestTrades.get(ticker).isEmpty())
+							&& latestBars.get(ticker) != null)
 					.collect(Collectors.toMap(
 							ticker -> ticker,
 							ticker -> {
-								Double yesterdaysClose = yesterdaysBars.get(ticker).getFirst().getC();
-								Double currentPrice = latestTrades.get(ticker).getFirst().getP();
+								Double yesterdaysClose = yesterdaysBars.get(ticker).getLast().getC();
+								Double currentPrice = latestBars.get(ticker).getLast().getC();
 								
-								return ((currentPrice - yesterdaysClose) / yesterdaysClose) * 100;
+								return new BigDecimal(Double.toString(((currentPrice - yesterdaysClose) / yesterdaysClose) * 100))
+										.setScale(2, RoundingMode.HALF_UP).doubleValue();
 							}
 					));
-					
-		} catch (net.jacobpeterson.alpaca.openapi.marketdata.ApiException e) {
+			
+			priceChangeAndTradesList.add(latestBars);
+			priceChangeAndTradesList.add(priceChangePercentages);
+			
+		} catch (ApiException e) {
 			System.out.println(e.getCode() + "\n" + e.getMessage());
 		}
 		
-		return priceChangePercentages;
+		return priceChangeAndTradesList;
 	}
 	
 	/**
@@ -213,7 +258,7 @@ class AlpacaHistoricalBarsDataService {
 						StockFeed.SIP, currency, null, Sort.ASC
 				).getBars();
 			}
-		} catch (net.jacobpeterson.alpaca.openapi.marketdata.ApiException e) {
+		} catch (ApiException e) {
 			System.out.println(e.getCode() + "\n" + e.getMessage());
 		}
 		
@@ -263,19 +308,109 @@ class AlpacaHistoricalBarsDataService {
 	 */
 	private LocalDate getStartDay(OffsetDateTime offsetStartTime,  OffsetDateTime offsetEndTime) {
 		Calendar validLastTradingDay = new Calendar();
+		String validDate = "";
 		try {
 			List<Calendar> marketCalendar = this.alpacaAPI.trader().calendar().
 					getCalendar(offsetStartTime, offsetEndTime, "TRADING");
+			
 			validLastTradingDay = marketCalendar.getFirst();
+			
 		} catch (net.jacobpeterson.alpaca.openapi.trader.ApiException e) {
 			System.out.println(e.getCode() + "\n" + e.getMessage());
 		}
 		
-		String date = validLastTradingDay.getDate();
-		String[] splitDate = date.split("-");
+		validDate = validLastTradingDay.getDate();
+		String[] splitValidDate = validDate.split("-");
 		
 		// Year-Month-Day
-		return LocalDate.of(Integer.parseUnsignedInt(splitDate[0]),
-				Integer.parseUnsignedInt(splitDate[1]), Integer.parseUnsignedInt(splitDate[2]));
+		return LocalDate.of(Integer.parseUnsignedInt(splitValidDate[0]),
+				Integer.parseUnsignedInt(splitValidDate[1]), Integer.parseUnsignedInt(splitValidDate[2]));
+	}
+	
+	/**
+	 * Calculates the last trading day based on the given start and end times.
+	 *
+	 * @param offsetStartTime The start time of the historical data.
+	 * @param offsetEndTime The end time of the historical data.
+	 * @return A LocalDate object representing the last trading day. If an error occurs, null is returned.
+	 */
+	private LocalDate getLastTradingDay(OffsetDateTime offsetStartTime, OffsetDateTime offsetEndTime) {
+		Calendar validLastTradingDay = new Calendar();
+		String validDate = "";
+		try {
+			List<Calendar> marketCalendar = this.alpacaAPI.trader().calendar().
+					getCalendar(offsetStartTime, offsetEndTime, "TRADING");
+			
+			// If today is the last trading day, get the second last trading day for yesterday's data
+			if (LocalDate.now().toString().equals(marketCalendar.getLast().getDate())) {
+				validLastTradingDay = marketCalendar.get(marketCalendar.size() - 2);
+			} else { // Otherwise (if checking on weekends or holidays), get the last trading day
+				validLastTradingDay = marketCalendar.getLast();
+			}
+			
+			validDate = validLastTradingDay.getDate();
+			String[] splitValidDate = validDate.split("-");
+			
+			// Year-Month-Day
+			return LocalDate.of(Integer.parseUnsignedInt(splitValidDate[0]),
+					Integer.parseUnsignedInt(splitValidDate[1]), Integer.parseUnsignedInt(splitValidDate[2]));
+			
+		} catch (net.jacobpeterson.alpaca.openapi.trader.ApiException e) {
+			System.out.println(e.getCode() + "\n" + e.getMessage());
+			return null;
+		}
+	}
+	
+	/**
+	 * Gets the last two trading days based on the given start and end times.
+	 *
+	 * @param offsetStartTime The start time of the historical data.
+	 * @param offsetEndTime The end time of the historical data.
+	 * @return A list of LocalDate objects representing the last two trading days. The older date is given first and
+	 * the later date is given second. If the request is done during pre-market hours, the last trading day is
+	 * yesterday and the second last trading day is the day before yesterday. If an error occurs, null is returned.
+	 */
+	private List<LocalDate> getLastTwoTradingDays(OffsetDateTime offsetStartTime, OffsetDateTime offsetEndTime) {
+		List<LocalDate> dates = new ArrayList<>();
+		Calendar secondlastValidLastTradingDay = new Calendar();
+		String secondlastValidDate = "";
+		Calendar validLastTradingDay = new Calendar();
+		String validLastDate = "";
+		try {
+			List<Calendar> marketCalendar = this.alpacaAPI.trader().calendar().
+					getCalendar(offsetStartTime, offsetEndTime, "TRADING");
+			
+			// If today is the most recent trading day, and it's before 9:45 AM ET, the data must be for yesterday and
+			// day before yesterday.
+			if (marketCalendar.getLast().getDate().equals(LocalDate.now().toString())
+			&& OffsetDateTime.of(LocalDate.now(), LocalTime.now(), zoneOffset)
+					.isBefore(OffsetDateTime.of(LocalDate.now(), LocalTime.of(9, 45), zoneOffset))) {
+				
+				secondlastValidLastTradingDay = marketCalendar.get(marketCalendar.size() - 3);
+				validLastTradingDay = marketCalendar.get(marketCalendar.size() - 2);
+			} else { // If it's after 9:45 AM on the most recent trading day or on weekends/holidays, get the last two trading days
+				secondlastValidLastTradingDay = marketCalendar.get(marketCalendar.size() - 2);
+				validLastTradingDay = marketCalendar.getLast();
+			}
+			
+			secondlastValidDate = secondlastValidLastTradingDay.getDate();
+			String[] splitSecondlastValidDate = secondlastValidDate.split("-");
+			
+			validLastDate = validLastTradingDay.getDate();
+			String[] splitLastValidDate = validLastDate.split("-");
+			
+			dates.add(LocalDate.of(Integer.parseUnsignedInt(splitSecondlastValidDate[0]),
+					Integer.parseUnsignedInt(splitSecondlastValidDate[1]), Integer.parseUnsignedInt(splitSecondlastValidDate[2])));
+			
+			dates.add(LocalDate.of(Integer.parseUnsignedInt(splitLastValidDate[0]),
+					Integer.parseUnsignedInt(splitLastValidDate[1]), Integer.parseUnsignedInt(splitLastValidDate[2])));
+			
+			// Year-Month-Day
+			return dates;
+			
+		} catch (net.jacobpeterson.alpaca.openapi.trader.ApiException e) {
+			System.out.println(e.getCode() + "\n" + e.getMessage());
+			return null;
+		}
 	}
 }

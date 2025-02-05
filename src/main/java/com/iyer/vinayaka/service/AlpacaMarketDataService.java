@@ -192,16 +192,17 @@ public class AlpacaMarketDataService {
 	}
 	
 	/**
-	 * Gets the price change percentages for the given tickers.
+	 * Gets the change percentage of the given tickers compared to the last trading day.
 	 *
-	 * @param tickers The tickers whose price change percentages are to be calculated.
-	 * @param latestTrades The latest trades data for the tickers whose change percentages are required.
+	 * @param tickersToGetDataFor The tickers whose change percentage has to be calculated.
 	 *
-	 * @return A map of tickers to their price change percentages.
+	 * @return An array list of map of the latest bars and the price change percentages. The first map
+	 * is a {@code Map<String, List<StockBar>>} which is the latest bars, and the second map is a
+	 * {@code Map<String, Double>} which is the price change percentages. Cast it accordingly.
+	 * If there's an error, an empty (array)list is returned.
 	 */
-	public Map<String, Double> getYesterdaysHistoricalBars(List<String> tickers,
-														   Map<String, List<StockTrade>> latestTrades) {
-		return this.historicalBarsDataService.getLatestPriceChangePercentages(tickers, latestTrades);
+	public List<Map<String, ?>> getPriceChangePercentages(List<String> tickersToGetDataFor) {
+		return this.historicalBarsDataService.getLatestPriceChangePercentages(tickersToGetDataFor);
 	}
 	
 	/**

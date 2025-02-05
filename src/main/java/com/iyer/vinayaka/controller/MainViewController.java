@@ -2,6 +2,7 @@ package com.iyer.vinayaka.controller;
 
 import com.iyer.vinayaka.entities.UserSettings;
 import com.iyer.vinayaka.entities.UserTickers;
+import com.iyer.vinayaka.service.AlpacaMarketDataService;
 import com.iyer.vinayaka.service.UserSettingsService;
 import com.iyer.vinayaka.service.UserTickersService;
 import com.iyer.vinayaka.util.DataHolder;
@@ -18,14 +19,13 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
+import net.jacobpeterson.alpaca.openapi.marketdata.model.StockBar;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.net.URL;
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Objects;
-import java.util.ResourceBundle;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Component
 public class MainViewController implements Initializable {
@@ -37,13 +37,16 @@ public class MainViewController implements Initializable {
 	private final UIUtils uiUtils;
 	private final DataHolder dataHolder;
 	private final UserTickersService userTickersService;
+	private final AlpacaMarketDataService alpacaMarketDataService;
 	
 	@Autowired
-	public MainViewController(UserSettingsService userSettingsService, UserTickersService service, UIUtils uiUtils, DataHolder dataHolder) {
+	public MainViewController(UserSettingsService userSettingsService, UserTickersService service,
+							  UIUtils uiUtils, DataHolder dataHolder, AlpacaMarketDataService alpacaMarketDataService) {
 		this.userSettingsService = userSettingsService;
 		this.userTickersService = service;
 		this.uiUtils = uiUtils;
 		this.dataHolder = dataHolder;
+		this.alpacaMarketDataService = alpacaMarketDataService;
 	}
 	
 	@Override
@@ -54,74 +57,19 @@ public class MainViewController implements Initializable {
 			
 			this.setBackground(settings.getDark_mode());
 			List<UserTickers> tickers = this.userTickersService.getAllTickersSortedBySymbol();
+			List<UserTickers> sampleTickers = getUserTickers();
 			
-			UserTickers appleTicker = new UserTickers();
-			appleTicker.setExchange("NASDAQ");
-			appleTicker.setName("Apple");
-			appleTicker.setFavorite(false);
-			appleTicker.setSymbol("AAPL");
+			List<Map<String, ?>> priceChangeAndTrades = this.alpacaMarketDataService.
+					getPriceChangePercentages((sampleTickers.stream().map(UserTickers::getSymbol).toList()));
 			
-			UserTickers nvidiaTicker = new UserTickers();
-			nvidiaTicker.setExchange("NASDAQ");
-			nvidiaTicker.setName("NVIDIA");
-			nvidiaTicker.setFavorite(false);
-			nvidiaTicker.setSymbol("NVDA");
+			// For the below, we know for a fact that the first element is a Map<String, List<StockBar>> and the second
+			// element is a Map<String, Double>. We can safely cast them to their respective types.
+			@SuppressWarnings("unchecked")
+			Map<String, List<StockBar>> latestStockBars = (Map<String, List<StockBar>>) priceChangeAndTrades.getFirst();
+			@SuppressWarnings("unchecked")
+			Map<String, Double> priceChange = (Map<String, Double>) priceChangeAndTrades.getLast();
 			
-			UserTickers lucidTicker = new UserTickers();
-			lucidTicker.setExchange("NYSE");
-			lucidTicker.setName("Lucid");
-			lucidTicker.setFavorite(false);
-			lucidTicker.setSymbol("LCID");
-			
-			UserTickers palantirTicker = new UserTickers();
-			palantirTicker.setExchange("NASDAQ");
-			palantirTicker.setName("Palantir");
-			palantirTicker.setFavorite(false);
-			palantirTicker.setSymbol("PLTR");
-			
-			UserTickers googleTicker = new UserTickers();
-			googleTicker.setExchange("NASDAQ");
-			googleTicker.setName("Google");
-			googleTicker.setFavorite(false);
-			googleTicker.setSymbol("GOOGL");
-			
-			UserTickers vugTicker = new UserTickers();
-			vugTicker.setExchange("NYSE");
-			vugTicker.setName("Vanguard Growth ETF");
-			vugTicker.setFavorite(false);
-			vugTicker.setSymbol("VUG");
-			
-			UserTickers gamestopTicker = new UserTickers();
-			gamestopTicker.setExchange("NYSE");
-			gamestopTicker.setName("Gamestop");
-			gamestopTicker.setFavorite(false);
-			gamestopTicker.setSymbol("GME");
-			
-			UserTickers sofiTicker = new UserTickers();
-			sofiTicker.setExchange("NASDAQ");
-			sofiTicker.setName("SoFi");
-			sofiTicker.setFavorite(false);
-			sofiTicker.setSymbol("SOFI");
-			
-			UserTickers oracleTicker = new UserTickers();
-			oracleTicker.setExchange("NYSE");
-			oracleTicker.setName("Oracle");
-			oracleTicker.setFavorite(false);
-			oracleTicker.setSymbol("ORCL");
-			
-			UserTickers microsoftTicker = new UserTickers();
-			microsoftTicker.setExchange("NASDAQ");
-			microsoftTicker.setName("Microsoft");
-			microsoftTicker.setFavorite(false);
-			microsoftTicker.setSymbol("MSFT");
-			
-			List<UserTickers> sampleTickers = List.of(
-					appleTicker, nvidiaTicker, lucidTicker, palantirTicker,
-					googleTicker, vugTicker, gamestopTicker, sofiTicker,
-					oracleTicker, microsoftTicker
-			);
-			
-			this.populateGrid(sampleTickers);
+			this.populateGrid(latestStockBars, priceChange);
 			// Process
 			
 		} catch (NoSuchElementException n) {
@@ -158,7 +106,7 @@ public class MainViewController implements Initializable {
 		}
 	}
 	
-	private void populateGrid(List<UserTickers> tickers) {
+	private void populateGrid(Map<String, List<StockBar>> latestBars, Map<String, Double> priceChange) {
 		int MAX_COLUMNS = 3;
 		
 		GridPane tickerGrid = new GridPane(10,10);
@@ -178,36 +126,121 @@ public class MainViewController implements Initializable {
 			tickerGrid.getColumnConstraints().add(column);
 		}
 		
-		int row = 0;
-		int col = 0;
+		// Create a VBox for each ticker
+		List<VBox> tickerBoxes = priceChange.entrySet().stream().map(
+				entry -> {
+					String tickerSymbol = entry.getKey();
+					Double latestTradePrice = latestBars.get(tickerSymbol).getLast().getC();
+					Double priceChangePercentage = priceChange.get(tickerSymbol);
+					
+					Label tickerNameLabel = new Label(tickerSymbol);
+					Label tickerPriceLabel = new Label(Double.toString(latestTradePrice));
+					Label tickerChangeLabel = new Label(Double.toString(priceChangePercentage) + "%");
+					
+					VBox tickerBox = new VBox(tickerNameLabel, tickerPriceLabel, tickerChangeLabel);
+					VBox.setMargin(tickerBox, new Insets(50, 50, 50, 50));
+					tickerBox.setAlignment(Pos.CENTER);
+					tickerBox.getChildren().stream().map(Label.class::cast).forEach(label -> {
+						label.setPadding(new Insets(0, 0, 5, 0));
+						label.getStylesheets().removeAll("tickerPositive", "tickerNegative", "tickerZero");
+						if (priceChangePercentage > 0) {
+							label.getStyleClass().add("tickerPositive");
+						} else if (priceChangePercentage < 0) {
+							label.getStyleClass().add("tickerNegative");
+						} else {
+							label.getStyleClass().add("tickerZero");
+						}
+					});
+					
+					return tickerBox;
+				}
+		).toList(); // Collect all the VBoxes into a list.
 		
-		for (UserTickers ticker : tickers) {
-			Label tickerNameLabel = new Label(ticker.getSymbol());
-			Label tickerPriceLabel = new Label(ticker.getName());
-			Label tickerChangeLabel = new Label(ticker.getExchange());
-			VBox tickerBox = new VBox(tickerNameLabel, tickerPriceLabel, tickerChangeLabel);
-			tickerBox.setAlignment(Pos.CENTER);
-			VBox.setMargin(tickerBox, new Insets(5, 5, 5, 5));
-			tickerBox.getChildren().stream().map(Label.class::cast).forEach(label -> {
-				label.setPadding(new Insets(0, 0, 5, 0));
-				// TODO: Later change the style according to price change.
-				label.getStylesheets().removeAll("tickerPositive", "tickerNegative", "tickerZero");
-				label.getStyleClass().add("tickerZero");
-			});
-			// tickerBox.getChildren().forEach(Node::applyCss);
-			tickerGrid.add(tickerBox, col, row);
-			
-			col++;
-			if (col == MAX_COLUMNS) {
-				col = 0;
-				row++;
+		// AtomicInteger is required for lambda expressions, as they require final or effectively final variables.
+		AtomicInteger col = new AtomicInteger(0);
+		AtomicInteger row = new AtomicInteger(0);
+		
+		// Add each of the VBoxes to the GridPane
+		tickerBoxes.forEach(tickerBox -> {
+			tickerGrid.add(tickerBox, col.get(), row.get());
+			col.incrementAndGet();
+			if (col.get() == MAX_COLUMNS) {
+				col.set(0);
+				row.incrementAndGet();
 				RowConstraints constraints = new RowConstraints();
 				constraints.setVgrow(Priority.ALWAYS);
 				constraints.setMinHeight(100);
 				tickerGrid.getRowConstraints().add(constraints);
 			}
-		}
-		
+		});
 		this.tickerScrollPane.setContent(tickerGrid);
+	}
+	
+	private static List<UserTickers> getUserTickers() {
+		UserTickers appleTicker = new UserTickers();
+		appleTicker.setExchange("NASDAQ");
+		appleTicker.setName("Apple");
+		appleTicker.setFavorite(false);
+		appleTicker.setSymbol("AAPL");
+		
+		UserTickers nvidiaTicker = new UserTickers();
+		nvidiaTicker.setExchange("NASDAQ");
+		nvidiaTicker.setName("NVIDIA");
+		nvidiaTicker.setFavorite(false);
+		nvidiaTicker.setSymbol("NVDA");
+		
+		UserTickers lucidTicker = new UserTickers();
+		lucidTicker.setExchange("NYSE");
+		lucidTicker.setName("Lucid");
+		lucidTicker.setFavorite(false);
+		lucidTicker.setSymbol("LCID");
+		
+		UserTickers palantirTicker = new UserTickers();
+		palantirTicker.setExchange("NASDAQ");
+		palantirTicker.setName("Palantir");
+		palantirTicker.setFavorite(false);
+		palantirTicker.setSymbol("PLTR");
+		
+		UserTickers googleTicker = new UserTickers();
+		googleTicker.setExchange("NASDAQ");
+		googleTicker.setName("Google");
+		googleTicker.setFavorite(false);
+		googleTicker.setSymbol("GOOGL");
+		
+		UserTickers vugTicker = new UserTickers();
+		vugTicker.setExchange("NYSE");
+		vugTicker.setName("Vanguard Growth ETF");
+		vugTicker.setFavorite(false);
+		vugTicker.setSymbol("VUG");
+		
+		UserTickers gamestopTicker = new UserTickers();
+		gamestopTicker.setExchange("NYSE");
+		gamestopTicker.setName("Gamestop");
+		gamestopTicker.setFavorite(false);
+		gamestopTicker.setSymbol("GME");
+		
+		UserTickers sofiTicker = new UserTickers();
+		sofiTicker.setExchange("NASDAQ");
+		sofiTicker.setName("SoFi");
+		sofiTicker.setFavorite(false);
+		sofiTicker.setSymbol("SOFI");
+		
+		UserTickers oracleTicker = new UserTickers();
+		oracleTicker.setExchange("NYSE");
+		oracleTicker.setName("Oracle");
+		oracleTicker.setFavorite(false);
+		oracleTicker.setSymbol("ORCL");
+		
+		UserTickers microsoftTicker = new UserTickers();
+		microsoftTicker.setExchange("NASDAQ");
+		microsoftTicker.setName("Microsoft");
+		microsoftTicker.setFavorite(false);
+		microsoftTicker.setSymbol("MSFT");
+		
+		return List.of(
+				appleTicker, nvidiaTicker, lucidTicker, palantirTicker,
+				googleTicker, vugTicker, gamestopTicker, sofiTicker,
+				oracleTicker, microsoftTicker
+		);
 	}
 }
