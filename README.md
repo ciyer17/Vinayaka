@@ -1,6 +1,10 @@
 # Vinayaka
 A simple Java application for querying and managing stock tickers from NYSE, NASDAQ, and IEX exchanges using the Alpaca Markets API.
 
+## IMPORTANT
+- Currently, all listed data is 15-minute delayed due to assumption of usage of free Alpaca Markets accounts.
+- Data listed on Vinayaka is **NOT** intended to be used for any trading activity. I am **NOT** responsible for the result of *any* transaction that happens as a result of the data shown on Vinayaka. Data listed on Vinayaka is only intended for users who wish to casually check on the status of their favorite stocks, in a centralized location.
+
 ## Setup
 Currently, the project is in active development. So a lot of stuff needs to be done manually. In the future, it will be much simpler than this.<br/>
 
@@ -18,7 +22,15 @@ If you would like to set the same using Run Configurations, enter the following 
     MYSQL_PASSWORD=vinayaka\_108<br/><br/>
 _If you used a different username and/or password, please input that username and/or password_
 
-7. You should be able to run the application now.
+7. You should be able to run the application now. Make sure that the MySQL Server that you installed is running in the background, otherwise the application will crash.
+
+## Planned Features
+- Dedicated ticker window for each ticker showing a chart for 1D, 1W, 1M, 3M, 1Y, and 5Y historical bars.
+- Ability to sort by price percentage change, alphabetical order, and favorited status.
+- Ability to favorite tickers.
+- Delete tickers.
+- Implement a way to identify paid Alpaca Markets account users to get the latest data.
+- Options chain for tickers (not fully sure about this yet).
 
 ## Attribution
 Icons by [Icons8]. Thanks to them for offering great icons!
