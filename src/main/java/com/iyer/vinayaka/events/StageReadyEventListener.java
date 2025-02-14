@@ -26,6 +26,8 @@ public class StageReadyEventListener implements ApplicationListener<StageReadyEv
 	@Override
 	public void onApplicationEvent(StageReadyEvent event) {
 		Stage stage = event.getStage();
+		stage.setMinHeight(635);
+		stage.setMinWidth(760);
 		dataHolder.setContext(this.context);
 		dataHolder.setStage(stage);
 		FXMLLoader loader = new FXMLLoader(getClass().getResource(UIUtils.MAIN_VIEW));

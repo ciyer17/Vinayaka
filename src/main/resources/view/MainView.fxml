@@ -1,17 +1,33 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-
 <?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.TextField?>
 <?import javafx.scene.Cursor?>
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.*?>
-<AnchorPane fx:id="mainAnchorPane" minHeight="-Infinity" minWidth="-Infinity" prefHeight="720.0" prefWidth="1280.0" stylesheets="@../css/stylesheet.css" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.iyer.vinayaka.controller.MainViewController">
+<AnchorPane fx:id="mainAnchorPane" prefHeight="720.0" prefWidth="1280.0" stylesheets="@../css/stylesheet.css" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.iyer.vinayaka.controller.MainViewController">
    <children>
-      <ImageView fx:id="settingsImageView" fitHeight="55.0" fitWidth="55.0" onMouseClicked="#navigateToSettingsPage" pickOnBounds="true" preserveRatio="true" AnchorPane.bottomAnchor="15.0" AnchorPane.rightAnchor="15.0" AnchorPane.topAnchor="15.0">
+      <ScrollPane fx:id="tickerScrollPane" fitToHeight="true" fitToWidth="true" nodeOrientation="LEFT_TO_RIGHT" prefHeight="200.0" prefWidth="200.0" AnchorPane.bottomAnchor="10.0" AnchorPane.leftAnchor="10.0" AnchorPane.rightAnchor="10.0" AnchorPane.topAnchor="80.0" />
+      <HBox fx:id="searchHbox" alignment="CENTER" layoutX="493.0" layoutY="27.0" prefHeight="32.0" prefWidth="294.0" AnchorPane.topAnchor="24.0">
+         <children>
+            <TextField fx:id="searchTickerTextField" alignment="CENTER" focusTraversable="false" prefHeight="32.0" prefWidth="963.0" promptText="Search for a ticker" styleClass="infoTextFields" HBox.hgrow="ALWAYS">
+               <cursor>
+                  <Cursor fx:constant="TEXT" />
+               </cursor>
+            </TextField>
+            <Separator orientation="VERTICAL" prefHeight="32.0" prefWidth="13.0" visible="false" HBox.hgrow="ALWAYS" />
+            <ImageView fx:id="searchTickerButton" fitHeight="32.0" fitWidth="32.0" onMouseClicked="#searchTicker" pickOnBounds="true" preserveRatio="true">
+               <cursor>
+                  <Cursor fx:constant="HAND" />
+               </cursor>
+            </ImageView>
+         </children>
+      </HBox>
+      <ImageView fx:id="settingsImageView" fitHeight="55.0" fitWidth="55.0" layoutX="1215.0" layoutY="14.0" onMouseClicked="#navigateToSettingsPage" pickOnBounds="true" preserveRatio="true" AnchorPane.rightAnchor="10.0" AnchorPane.topAnchor="15.0">
          <cursor>
             <Cursor fx:constant="HAND" />
          </cursor>
       </ImageView>
-      <ScrollPane fx:id="tickerScrollPane" fitToHeight="true" fitToWidth="true" nodeOrientation="LEFT_TO_RIGHT" prefHeight="200.0" prefWidth="200.0" AnchorPane.bottomAnchor="10.0" AnchorPane.leftAnchor="10.0" AnchorPane.rightAnchor="10.0" AnchorPane.topAnchor="80.0" />
    </children>
 </AnchorPane>

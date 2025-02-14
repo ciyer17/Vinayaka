@@ -4,11 +4,13 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 
 @Entity
 @Table(name = "user_tickers")
 @Data
+@AllArgsConstructor
 public class UserTickers {
 	@Id
 	@Column(nullable = false, columnDefinition = "varchar(30)")
@@ -22,4 +24,6 @@ public class UserTickers {
 	
 	@Column(name = "is_favorite", nullable = false)
 	private boolean favorite;
+	
+	public UserTickers() {}
 }

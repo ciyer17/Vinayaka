@@ -21,11 +21,18 @@ public class UIUtils {
 	public static final String MAIN_VIEW = "/view/MainView.fxml";
 	public static final String UPDATE_SETTINGS_VIEW = "/view/UpdateSettings.fxml";
 	public static final String ENTER_API_SECRETS_VIEW = "/view/APISecrets.fxml";
+	public static final String TICKER_VIEW = "/view/TickerView.fxml";
 	
 	public static final String DARK_MODE_IMG = "/icons/settings-dark-mode.png";
 	public static final String LIGHT_MODE_IMG = "/icons/settings-light-mode.png";
+	public static final String SEARCH_TICKER = "/icons/search-ticker.png";
+	
 	public static final String DARK_MODE_BG = "appBackground";
 	public static final String LIGHT_MODE_BG = "appBackgroundLight";
+	public static final String DARK_MODE_LABEL = "infoLabels";
+	public static final String LIGHT_MODE_LABEL = "infoLabelsLight";
+	public static final String DARK_MODE_TEXTFIELD = "infoTextFields";
+	public static final String LIGHT_MODE_TEXTFIELD = "infoTextFieldsLight";
 	
 	private final DataHolder dataHolder;
 	

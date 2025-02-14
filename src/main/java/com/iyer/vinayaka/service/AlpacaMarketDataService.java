@@ -6,10 +6,12 @@ import net.jacobpeterson.alpaca.openapi.marketdata.model.StockFeed;
 import net.jacobpeterson.alpaca.openapi.marketdata.model.StockQuote;
 import net.jacobpeterson.alpaca.openapi.marketdata.model.StockTrade;
 import net.jacobpeterson.alpaca.openapi.trader.model.Account;
+import net.jacobpeterson.alpaca.openapi.trader.model.AssetClass;
 import net.jacobpeterson.alpaca.openapi.trader.model.Assets;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -43,6 +45,23 @@ public class AlpacaMarketDataService {
 		}
 		
 		return account != null;
+	}
+	
+	/**
+	 * Gets all the valid assets tracked by the Alpaca Markets API.
+	 *
+	 * @return A list of all the assets tracked by the Alpaca Markets API.
+	 */
+	public List<Assets> getAllAssets() {
+		List<Assets> assets = new ArrayList<>();
+		try {
+			assets = this.alpacaAPI.trader().assets().getV2Assets("active", AssetClass.US_EQUITY.getValue(),
+					null, null);
+		} catch (net.jacobpeterson.alpaca.openapi.trader.ApiException e) {
+			System.out.println(e.getCode() + "\n" + e.getMessage());
+		}
+		
+		return assets;
 	}
 	
 	/**

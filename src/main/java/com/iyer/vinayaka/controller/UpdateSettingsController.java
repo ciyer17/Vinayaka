@@ -95,17 +95,17 @@ public class UpdateSettingsController implements Initializable {
 	}
 	
 	private void setBackground(boolean darkMode) {
-		this.preferenceAnchorPane.getStyleClass().removeAll("appBackground", "appBackgroundLight");
-		this.preferenceAnchorPane.getStyleClass().add(darkMode ? "appBackground" : "appBackgroundLight");
+		this.preferenceAnchorPane.getStyleClass().removeAll(UIUtils.DARK_MODE_BG, UIUtils.LIGHT_MODE_BG);
+		this.preferenceAnchorPane.getStyleClass().add(darkMode ? UIUtils.DARK_MODE_BG : UIUtils.LIGHT_MODE_BG);
 		
 		this.labelPane.getChildren().stream().map(node -> (Label) node).forEach(label -> {
-			label.getStyleClass().removeAll("infoLabels", "infoLabelsLight");
-			label.getStyleClass().add(darkMode ? "infoLabels" : "infoLabelsLight");
+			label.getStyleClass().removeAll(UIUtils.DARK_MODE_LABEL, UIUtils.LIGHT_MODE_LABEL);
+			label.getStyleClass().add(darkMode ? UIUtils.DARK_MODE_LABEL : UIUtils.LIGHT_MODE_LABEL);
 		});
 		
 		this.textFieldPane.getChildren().stream().map(node -> (TextField) node).forEach(textField -> {
-			textField.getStyleClass().removeAll("infoTextFields", "infoTextFieldsLight");
-			textField.getStyleClass().add(darkMode ? "infoTextFields" : "infoTextFieldsLight");
+			textField.getStyleClass().removeAll(UIUtils.DARK_MODE_TEXTFIELD, UIUtils.LIGHT_MODE_TEXTFIELD);
+			textField.getStyleClass().add(darkMode ? UIUtils.DARK_MODE_TEXTFIELD : UIUtils.LIGHT_MODE_TEXTFIELD);
 		});
 	}
 }
