@@ -2,7 +2,7 @@
 A simple Java application for querying and managing stock tickers from NYSE, NASDAQ, and IEX exchanges using the Alpaca Markets API.
 
 ## Setup
-Currently, the project is in active development. So a lot of stuff needs to be done manually. <br/>
+Currently, the project is in active development. So a lot of stuff needs to be done manually. In the future, it will be much simpler than this.<br/>
 
 1. [Download] and install the Amazon Corretto JDK 21. Make sure to install the JDK and *not* the JRE.
 2. Install an IDE (preferably IntelliJ IDEA) of your choice.
@@ -20,8 +20,12 @@ _If you used a different username and/or password, please input that username an
 
 7. You should be able to run the application now.
 
+## Attribution
+Icons by [Icons8]. Thanks to them for offering great icons!
+
 [Download]: https://docs.aws.amazon.com/corretto/latest/corretto-21-ug/downloads-list.html
 [MySQL]: https://dev.mysql.com/downloads/mysql/
 [MySQL Workbench]: https://dev.mysql.com/downloads/workbench/
 [this]: https://www.tutorialspoint.com/how-to-run-sql-script-in-mysql
 [this one]: https://sebhastian.com/mysql-running-sql-file/
+[Icons8]: https://icons8.com/
