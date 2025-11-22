@@ -22,25 +22,28 @@ public class UIUtils {
 	public static final String UPDATE_SETTINGS_VIEW = "/view/UpdateSettings.fxml";
 	public static final String ENTER_API_SECRETS_VIEW = "/view/APISecrets.fxml";
 	public static final String TICKER_VIEW = "/view/TickerView.fxml";
-	
+
 	public static final String DARK_MODE_IMG = "/icons/settings-dark-mode.png";
 	public static final String LIGHT_MODE_IMG = "/icons/settings-light-mode.png";
 	public static final String SEARCH_TICKER = "/icons/search-ticker.png";
-	
+
 	public static final String DARK_MODE_BG = "appBackground";
 	public static final String LIGHT_MODE_BG = "appBackgroundLight";
 	public static final String DARK_MODE_LABEL = "infoLabels";
 	public static final String LIGHT_MODE_LABEL = "infoLabelsLight";
 	public static final String DARK_MODE_TEXTFIELD = "infoTextFields";
 	public static final String LIGHT_MODE_TEXTFIELD = "infoTextFieldsLight";
-	
+
+	public static final int API_KEY_LEN = 26;
+	public static final int API_SECRET_LEN = 44;
+
 	private final DataHolder dataHolder;
-	
+
 	@Autowired
 	public UIUtils(DataHolder dataHolder) {
 		this.dataHolder = dataHolder;
 	}
-	
+
 	/**
 	 * Navigates to the specified page.
 	 *
@@ -60,7 +63,7 @@ public class UIUtils {
 			throw new RuntimeException(ex);
 		}
 	}
-	
+
 	/**
 	 * Shows the specified alert.
 	 * @param title The title of the alert window.
@@ -74,7 +77,7 @@ public class UIUtils {
 		alert.setContentText(alertMessage);
 		alert.showAndWait();
 	}
-	
+
 	/**
 	 * Validates the API Key and API Secret. The API Key and API Secret are valid if they are not empty, AND if they
 	 * are alphanumeric, AND if they are valid Alpaca API keys.
@@ -85,13 +88,16 @@ public class UIUtils {
 	 */
 	public boolean validateAPIDetails(String apiKey, String apiSecret) {
 		boolean valid = false;
-		
+
 		if (apiKey.isEmpty() || apiSecret.isEmpty()) {
 			this.showAlert("Empty Fields", "API Key and API Secret cannot be empty.",
 					Alert.AlertType.ERROR);
-			
+
 		} else if (!checkAPIDetailsLength(apiKey, apiSecret)) {
-			this.showAlert("Invalid Length", "API Key must be 20 characters long and API Secret must be 40 characters long.",
+			System.out.println("API Key Length: " + apiKey.length() + "\nAPI Secret Length: " + apiSecret.length());
+					this.showAlert("Invalid Length",
+					"API Key must be " + API_KEY_LEN + " characters long and API Secret must be " + API_SECRET_LEN
+							+ " characters long.",
 					Alert.AlertType.ERROR);
 		} else if (!doAPIDetailsHaveValidCharacters(apiKey, apiSecret)) {
 			this.showAlert("Invalid Characters", "API Key and API Secret can only contain alphanumeric characters.",
@@ -105,42 +111,42 @@ public class UIUtils {
 					Alert.AlertType.INFORMATION);
 			valid = true;
 		}
-		
+
 		return valid;
 	}
-	
+
 	/**
 	 * Checks if the API Key and API Secret are valid. They are valid if and only if
-	 * they contain only alphanumeric characters, AND if the API Key is exactly 20 characters
-	 * long AND if the API Secret is exactly 40 characters long.
+	 * they contain only alphanumeric characters, AND if the API Key is exactly
+	 * {@API_KEY_LEN} characters
+	 * long AND if the API Secret is exactly {@API_SECRET_LEN} characters long.
 	 *
-	 * @param apiKey The API Key to check.
+	 * @param apiKey    The API Key to check.
 	 * @param apiSecret The API Secret to check.
 	 * @return True if the API Key and API Secret are valid, false otherwise.
 	 */
 	private static boolean doAPIDetailsHaveValidCharacters(String apiKey, String apiSecret) {
-		if (apiKey.length() != 20 || apiSecret.length() != 40) {
-			return false;
-		}
 		Pattern specialCharacters = Pattern.compile("[^a-zA-Z0-9 ]");
 		Matcher apiKeyMatcher = specialCharacters.matcher(apiKey);
 		Matcher apiSecretMatcher = specialCharacters.matcher(apiSecret);
-		
+
 		return (!apiKeyMatcher.find() && !apiSecretMatcher.find());
 	}
-	
+
 	/**
-	 * Checks if the API Key and API Secret lengths are valid. API Key must be 20 characters long and
-	 * the API Secret must be 40 characters long.
+	 * Checks if the API Key and API Secret lengths are valid. API Key must be
+	 * {@API_KEY_LEN} characters long and
+	 * the API Secret must be {@API_SECRET_LEN} characters long.
 	 *
-	 * @param apiKey The API Key to check.
+	 * @param apiKey    The API Key to check.
 	 * @param apiSecret The API Secret to check.
-	 * @return True if the API Key and API Secret lengths are valid, false otherwise.
+	 * @return True if the API Key and API Secret lengths are valid, false
+	 *         otherwise.
 	 */
 	private static boolean checkAPIDetailsLength(String apiKey, String apiSecret) {
-		return apiKey.length() == 20 && apiSecret.length() == 40;
+		return apiKey.length() == API_KEY_LEN && apiSecret.length() == API_SECRET_LEN;
 	}
-	
+
 	/**
 	 * Checks if the API Key and API Secret are from Alpaca.
 	 *
