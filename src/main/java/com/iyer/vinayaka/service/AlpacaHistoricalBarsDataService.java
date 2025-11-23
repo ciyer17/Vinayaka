@@ -74,8 +74,15 @@ class AlpacaHistoricalBarsDataService {
 		OffsetDateTime rangeEnd = OffsetDateTime.of(nycTime.today(), LocalTime.MAX, nycTime.offset());
 
 		try {
-			cachedMarketCalendar = this.alpacaAPI.trader().calendar().
+			List<Calendar> fetchedCalendar = this.alpacaAPI.trader().calendar().
 					getCalendar(rangeStart, rangeEnd, "TRADING");
+
+			// Filter out any future trading days (API sometimes includes the next trading day)
+			String todayStr = nycTime.today().toString();
+			cachedMarketCalendar = fetchedCalendar.stream()
+					.filter(cal -> cal.getDate().compareTo(todayStr) <= 0)
+					.toList();
+
 			marketCalendarCacheDate = nycTime.today();
 			return cachedMarketCalendar;
 		} catch (net.jacobpeterson.alpaca.openapi.trader.ApiException e) {
@@ -106,6 +113,9 @@ class AlpacaHistoricalBarsDataService {
 		List<Map<String, ?>> priceChangeAndTradesList = new ArrayList<>();
 		try {
 			List<LocalDate> dates = this.getLastTwoTradingDays();
+			if (dates == null || dates.size() < 2) {
+				return priceChangeAndTradesList;
+			}
 			LocalDate secondLastTradingDay = dates.getFirst();
 			LocalDate lastTradingDay = dates.getLast();
 
