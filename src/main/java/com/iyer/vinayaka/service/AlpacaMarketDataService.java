@@ -8,7 +8,6 @@ import net.jacobpeterson.alpaca.openapi.marketdata.model.StockTrade;
 import net.jacobpeterson.alpaca.openapi.trader.model.Account;
 import net.jacobpeterson.alpaca.openapi.trader.model.AssetClass;
 import net.jacobpeterson.alpaca.openapi.trader.model.Assets;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -25,7 +24,6 @@ public class AlpacaMarketDataService {
 	private final String currency = "USD";
 	private final StockFeed feed = StockFeed.IEX;
 	
-	@Autowired
 	public AlpacaMarketDataService(AlpacaAPI api, AlpacaHistoricalBarsDataService dataService) {
 		this.alpacaAPI = api;
 		this.historicalBarsDataService = dataService;

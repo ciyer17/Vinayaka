@@ -7,7 +7,6 @@ import net.jacobpeterson.alpaca.openapi.marketdata.model.StockAdjustment;
 import net.jacobpeterson.alpaca.openapi.marketdata.model.StockBar;
 import net.jacobpeterson.alpaca.openapi.marketdata.model.StockFeed;
 import net.jacobpeterson.alpaca.openapi.trader.model.Calendar;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -28,7 +27,6 @@ class AlpacaHistoricalBarsDataService {
 	private final String tz = "America/New_York";
 	private final ZoneId zoneId = ZoneId.of(tz);
 
-	@Autowired
 	public AlpacaHistoricalBarsDataService(AlpacaAPI api) {
 		this.alpacaAPI = api;
 	}

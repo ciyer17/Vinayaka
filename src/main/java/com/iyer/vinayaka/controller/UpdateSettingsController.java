@@ -13,7 +13,6 @@ import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.AnchorPane;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.net.URL;
@@ -37,7 +36,6 @@ public class UpdateSettingsController implements Initializable {
 	private final DataHolder dataHolder;
 	private UserSettings settings;
 	
-	@Autowired
 	public UpdateSettingsController(UserSettingsService service,  UIUtils utils,  DataHolder holder) {
 		this.userSettingsService = service;
 		this.uiUtils = utils;

@@ -9,7 +9,6 @@ import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.Hyperlink;
 import javafx.scene.control.TextField;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 
 import java.util.TimeZone;
@@ -24,7 +23,6 @@ public class APISecretsController {
 	private final DataHolder dataHolder;
 	private final UIUtils uiUtils;
 	
-	@Autowired
 	public APISecretsController(UserSettingsService userSettingsService, DataHolder dataHolder, UIUtils uiUtils) {
 		this.userSettingsService = userSettingsService;
 		this.dataHolder = dataHolder;

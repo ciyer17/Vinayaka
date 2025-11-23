@@ -2,7 +2,6 @@ package com.iyer.vinayaka.service;
 
 import com.iyer.vinayaka.entities.UserSettings;
 import com.iyer.vinayaka.repository.UserSettingsRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,7 +13,6 @@ import java.util.Optional;
 public class UserSettingsService {
 	private final UserSettingsRepository userSettingsRepository;
 	
-	@Autowired
 	public UserSettingsService(UserSettingsRepository repository) {
 		this.userSettingsRepository = repository;
 	}

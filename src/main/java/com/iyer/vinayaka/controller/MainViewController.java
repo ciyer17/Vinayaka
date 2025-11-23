@@ -25,7 +25,6 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
 import net.jacobpeterson.alpaca.openapi.marketdata.model.StockBar;
 import net.jacobpeterson.alpaca.openapi.trader.model.Assets;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 
@@ -51,7 +50,6 @@ public class MainViewController implements Initializable {
 	private final ApplicationContext context;
 	private TickerRefresher tickerRefresher;
 	
-	@Autowired
 	public MainViewController(UserSettingsService userSettingsService, UserTickersService service,
 							  UIUtils uiUtils, DataHolder dataHolder, AlpacaMarketDataService alpacaMarketDataService,
 							  ApplicationContext context) {

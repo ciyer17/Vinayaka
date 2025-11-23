@@ -5,9 +5,9 @@ import com.iyer.vinayaka.util.UIUtils;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationListener;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -17,14 +17,13 @@ public class StageReadyEventListener implements ApplicationListener<StageReadyEv
 	private final ApplicationContext context;
 	private final DataHolder dataHolder;
 	
-	@Autowired
 	public StageReadyEventListener(ApplicationContext context, DataHolder holder) {
 		this.context = context;
 		this.dataHolder = holder;
 	}
 	
 	@Override
-	public void onApplicationEvent(StageReadyEvent event) {
+	public void onApplicationEvent(@NonNull StageReadyEvent event) {
 		Stage stage = event.getStage();
 		stage.setMinHeight(635);
 		stage.setMinWidth(760);

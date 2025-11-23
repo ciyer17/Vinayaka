@@ -6,7 +6,6 @@ import com.iyer.vinayaka.entities.UserTickers;
 import com.iyer.vinayaka.service.UserSettingsService;
 import com.iyer.vinayaka.service.UserTickersService;
 import javafx.application.Platform;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.event.ContextClosedEvent;
 import org.springframework.context.event.EventListener;
@@ -24,7 +23,6 @@ public class TickerRefresher {
 	private final ScheduledExecutorService executor;
 	private final ApplicationContext context;
 	
-	@Autowired
 	public TickerRefresher(UserSettingsService service, UserTickersService tickersService, ApplicationContext context) {
 		this.userSettingsService = service;
 		this.userTickersService = tickersService;

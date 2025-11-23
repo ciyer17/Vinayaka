@@ -9,7 +9,6 @@ import javafx.stage.Stage;
 import net.jacobpeterson.alpaca.AlpacaAPI;
 import net.jacobpeterson.alpaca.model.util.apitype.MarketDataWebsocketSourceType;
 import net.jacobpeterson.alpaca.model.util.apitype.TraderAPIEndpointType;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -39,7 +38,6 @@ public class UIUtils {
 
 	private final DataHolder dataHolder;
 
-	@Autowired
 	public UIUtils(DataHolder dataHolder) {
 		this.dataHolder = dataHolder;
 	}
