@@ -27,8 +27,61 @@ class AlpacaHistoricalBarsDataService {
 	private final String tz = "America/New_York";
 	private final ZoneId zoneId = ZoneId.of(tz);
 
+	// Market calendar cache - invalidates daily at midnight NYC time
+	private List<Calendar> cachedMarketCalendar;
+	private LocalDate marketCalendarCacheDate;
+
 	public AlpacaHistoricalBarsDataService(AlpacaAPI api) {
 		this.alpacaAPI = api;
+	}
+
+	/**
+	 * Bundles NYC timezone-related time values to ensure consistency within a
+	 * single method execution.
+	 * All values are derived from the same instant to guarantee they are coherent.
+	 */
+	private record NYCTimeInfo(ZonedDateTime now, LocalDate today, LocalTime time, ZoneOffset offset) {
+	}
+
+	/**
+	 * Creates a fresh NYCTimeInfo with current NYC time values.
+	 * Call this at the start of any method that needs NYC time information.
+	 *
+	 * @return A NYCTimeInfo record containing the current NYC time values.
+	 */
+	private NYCTimeInfo getNYCTimeInfo() {
+		ZonedDateTime now = ZonedDateTime.now(zoneId);
+		return new NYCTimeInfo(now, now.toLocalDate(), now.toLocalTime(), now.getOffset());
+	}
+
+	/**
+	 * Gets the market calendar for the last 7 days, using a daily cache.
+	 * The cache invalidates at midnight NYC time (when the date changes).
+	 *
+	 * @return A list of Calendar objects representing trading days, or null if an error occurs.
+	 */
+	private List<Calendar> getMarketCalendar() {
+		NYCTimeInfo nycTime = getNYCTimeInfo();
+
+		// Return cached calendar if it's from today
+		if (cachedMarketCalendar != null && nycTime.today().equals(marketCalendarCacheDate)) {
+			return cachedMarketCalendar;
+		}
+
+		// Cache is stale or empty - fetch fresh data
+		LocalDate startDay = nycTime.today().minusDays(7);
+		OffsetDateTime rangeStart = OffsetDateTime.of(startDay, LocalTime.MIN, nycTime.offset());
+		OffsetDateTime rangeEnd = OffsetDateTime.of(nycTime.today(), LocalTime.MAX, nycTime.offset());
+
+		try {
+			cachedMarketCalendar = this.alpacaAPI.trader().calendar().
+					getCalendar(rangeStart, rangeEnd, "TRADING");
+			marketCalendarCacheDate = nycTime.today();
+			return cachedMarketCalendar;
+		} catch (net.jacobpeterson.alpaca.openapi.trader.ApiException e) {
+			System.out.println(e.getCode() + "\n" + e.getMessage());
+			return null;
+		}
 	}
 
 	/**
@@ -42,40 +95,32 @@ class AlpacaHistoricalBarsDataService {
 	 * If there's an error, an empty (array)list is returned.
 	 */
 	public List<Map<String, ?>> getLatestPriceChangePercentages(List<String> tickersToGetDataFor) {
-		// Get current time in NYC timezone for all comparisons
-		ZonedDateTime nowInNYC = ZonedDateTime.now(zoneId);
-		LocalDate todayInNYC = nowInNYC.toLocalDate();
-		LocalTime currentTimeInNYC = nowInNYC.toLocalTime();
-		ZoneOffset currentNYCOffset = nowInNYC.getOffset();
+		NYCTimeInfo nycTime = this.getNYCTimeInfo();
 
-		LocalDate startDay = todayInNYC.minusDays(7);
 		LocalTime fromTime = LocalTime.of(15, 59, 0);
 		LocalTime toTime = LocalTime.of(16, 0, 0);
-
-		OffsetDateTime yesterdaysOffsetStartTime = OffsetDateTime.of(startDay, fromTime, ZoneOffset.UTC);
-		OffsetDateTime yesterdaysOffsetEndTime = OffsetDateTime.of(todayInNYC, toTime, ZoneOffset.UTC);
 
 		Map<String, List<StockBar>> yesterdaysBars;
 		Map<String, List<StockBar>> latestBars;
 		Map<String, Double> priceChangePercentages;
 		List<Map<String, ?>> priceChangeAndTradesList = new ArrayList<>();
 		try {
-			List<LocalDate> dates = this.getLastTwoTradingDays(yesterdaysOffsetStartTime, yesterdaysOffsetEndTime);
+			List<LocalDate> dates = this.getLastTwoTradingDays();
 			LocalDate secondLastTradingDay = dates.getFirst();
 			LocalDate lastTradingDay = dates.getLast();
 
 			LocalTime lastTradingDayFromTime;
 			LocalTime lastTradingDayEndTime;
 
-			if (lastTradingDay.equals(todayInNYC)) {
+			if (lastTradingDay.equals(nycTime.today())) {
 				// All time comparisons now use NYC time
-				boolean isAfterMarketOpen = currentTimeInNYC.isAfter(LocalTime.of(9, 45));
-				boolean isBeforeMarketClose = currentTimeInNYC.isBefore(LocalTime.of(16, 15));
+				boolean isAfterMarketOpen = nycTime.time().isAfter(LocalTime.of(9, 45));
+				boolean isBeforeMarketClose = nycTime.time().isBefore(LocalTime.of(16, 15));
 
 				// Intraday information
 				if (isAfterMarketOpen && isBeforeMarketClose) {
-					lastTradingDayFromTime = currentTimeInNYC.minusMinutes(16);
-					lastTradingDayEndTime = currentTimeInNYC.minusMinutes(15);
+					lastTradingDayFromTime = nycTime.time().minusMinutes(16);
+					lastTradingDayEndTime = nycTime.time().minusMinutes(15);
 				} else {
 					lastTradingDayFromTime = LocalTime.of(15, 59, 0);
 					lastTradingDayEndTime = LocalTime.of(16, 0, 0);
@@ -85,12 +130,14 @@ class AlpacaHistoricalBarsDataService {
 				lastTradingDayEndTime = LocalTime.of(16, 0, 0);
 			}
 
-			OffsetDateTime lastTradingDayOffsetStartTime = OffsetDateTime.of(lastTradingDay, lastTradingDayFromTime, currentNYCOffset);
-			OffsetDateTime lastTradingDayOffsetEndTime = OffsetDateTime.of(lastTradingDay, lastTradingDayEndTime, currentNYCOffset);
+			OffsetDateTime lastTradingDayOffsetStartTime = OffsetDateTime.of(lastTradingDay, lastTradingDayFromTime,
+					nycTime.offset());
+			OffsetDateTime lastTradingDayOffsetEndTime = OffsetDateTime.of(lastTradingDay, lastTradingDayEndTime,
+					nycTime.offset());
 
-			// Update the time range to match the New York time zone
-			yesterdaysOffsetStartTime = OffsetDateTime.of(secondLastTradingDay, fromTime, currentNYCOffset);
-			yesterdaysOffsetEndTime = OffsetDateTime.of(secondLastTradingDay, toTime, currentNYCOffset);
+			// Set the time range for yesterday's data
+			OffsetDateTime yesterdaysOffsetStartTime = OffsetDateTime.of(secondLastTradingDay, fromTime, nycTime.offset());
+			OffsetDateTime yesterdaysOffsetEndTime = OffsetDateTime.of(secondLastTradingDay, toTime, nycTime.offset());
 
 			String tickers = String.join(",", tickersToGetDataFor);
 
@@ -129,18 +176,50 @@ class AlpacaHistoricalBarsDataService {
 
 	/**
 	 * Gets the historical 1-day stock bars for the given ticker.
+	 * <ul>
+	 * <li>If today is a trading day and it's during market hours (9:45 AM - 4:15 PM
+	 * NYC):
+	 * returns bars for today up to (current time - 15 min)</li>
+	 * <li>If today is a trading day and it's after market close (4:15 PM+ NYC):
+	 * returns all bars for today</li>
+	 * <li>If today is a trading day and it's pre-market (before 9:45 AM NYC):
+	 * returns all bars for the previous trading day</li>
+	 * <li>If today is not a trading day (weekend/holiday):
+	 * returns all bars for the most recent trading day</li>
+	 * </ul>
 	 *
 	 * @param ticker The ticker whose 1-day bars are to be fetched.
 	 *
 	 * @return A list of StockBar objects representing the historical 1-day bars.
-	 * If the ticker is not found, null is returned.
+	 *         If the ticker is not found, null is returned.
 	 */
 	public List<StockBar> get1DHistoricalStockBars(String ticker) {
-		LocalDate todayInNYC = LocalDate.now(zoneId);
-		LocalDate startDay = todayInNYC.minusDays(7);
+		NYCTimeInfo nycTime = this.getNYCTimeInfo();
 		String timeFrame = "5Min";
 
-		return this.fetchHistoricalBars(ticker, startDay, todayInNYC, timeFrame);
+		// Get the most recent trading day (accounts for pre-market, weekends, holidays)
+		LocalDate tradingDay = this.getMostRecentTradingDay();
+
+		// Determine the end time based on current time and whether today is the trading
+		// day
+		OffsetDateTime fetchEndTime;
+		boolean isTodayTradingDay = tradingDay.equals(nycTime.today());
+		boolean isDuringMarketHours = nycTime.time().isAfter(LocalTime.of(9, 45))
+				&& nycTime.time().isBefore(LocalTime.of(16, 15));
+
+		if (isTodayTradingDay && isDuringMarketHours) {
+			// During market hours: fetch up to (now - 15 min) due to API restrictions
+			fetchEndTime = nycTime.now().minusMinutes(15).toOffsetDateTime();
+		} else {
+			// After market close, pre-market, weekend, or holiday: fetch full day ending at
+			// 4 PM
+			fetchEndTime = OffsetDateTime.of(tradingDay, LocalTime.of(16, 0), nycTime.offset());
+		}
+
+		// Market opens at 9:30 AM
+		OffsetDateTime fetchStartTime = OffsetDateTime.of(tradingDay, LocalTime.of(9, 30), nycTime.offset());
+
+		return this.fetchHistoricalBars(ticker, fetchStartTime, fetchEndTime, timeFrame);
 	}
 
 	/**
@@ -164,7 +243,7 @@ class AlpacaHistoricalBarsDataService {
 	 * If the ticker is not found, null is returned.
 	 */
 	public List<StockBar> get1MHistoricalBars(String ticker) {
-		LocalDate todayInNYC = LocalDate.now(zoneId);
+		LocalDate todayInNYC = this.getNYCTimeInfo().today();
 		LocalDate nMonthsAgo = todayInNYC.minusMonths(1);
 		long daysToSubtract = ChronoUnit.DAYS.between(nMonthsAgo, todayInNYC);
 
@@ -180,7 +259,7 @@ class AlpacaHistoricalBarsDataService {
 	 * If the ticker is not found, null is returned.
 	 */
 	public List<StockBar> get3MHistoricalBars(String ticker) {
-		LocalDate todayInNYC = LocalDate.now(zoneId);
+		LocalDate todayInNYC = this.getNYCTimeInfo().today();
 		LocalDate nMonthsAgo = todayInNYC.minusMonths(3);
 		long daysToSubtract = ChronoUnit.DAYS.between(nMonthsAgo, todayInNYC);
 
@@ -196,7 +275,7 @@ class AlpacaHistoricalBarsDataService {
 	 * If the ticker is not found, null is returned.
 	 */
 	public List<StockBar> get1YHistoricalBars(String ticker) {
-		LocalDate todayInNYC = LocalDate.now(zoneId);
+		LocalDate todayInNYC = this.getNYCTimeInfo().today();
 		LocalDate nYearsAgo = todayInNYC.minusYears(1);
 		long daysToSubtract = ChronoUnit.DAYS.between(nYearsAgo, todayInNYC);
 
@@ -212,7 +291,7 @@ class AlpacaHistoricalBarsDataService {
 	 * If the ticker is not found, null is returned.
 	 */
 	public List<StockBar> get5YHistoricalBars(String ticker) {
-		LocalDate todayInNYC = LocalDate.now(zoneId);
+		LocalDate todayInNYC = this.getNYCTimeInfo().today();
 		LocalDate nYearsAgo = todayInNYC.minusYears(5);
 		long daysToSubtract = ChronoUnit.DAYS.between(nYearsAgo, todayInNYC);
 
@@ -220,67 +299,30 @@ class AlpacaHistoricalBarsDataService {
 	}
 
 	/**
-	 * Fetches the historical bars for the given ticker between the given time range divided by the given timeframe.
+	 * Fetches the historical bars for the given ticker between the given time range
+	 * divided by the given timeframe.
 	 *
-	 * @param ticker The ticker whose historical bars are to be fetched.
-	 * @param startDay The first day of the historical data to be fetched.
-	 * @param endDay The last day of the historical data to be fetched.
+	 * @param ticker    The ticker whose historical bars are to be fetched.
+	 * @param startTime The start time of the historical data to be fetched.
+	 * @param endTime   The end time of the historical data to be fetched.
 	 * @param timeFrame The timeframe (or interval) of the bars to be aggregated.
-	 * @return A list of StockBar objects containing the historical bars for the requested ticker.
+	 * @return A list of StockBar objects containing the historical bars for the
+	 *         requested ticker.
 	 */
-	private List<StockBar> fetchHistoricalBars(String ticker, LocalDate startDay, LocalDate endDay, String timeFrame) {
-		LocalTime fromTime = LocalTime.of(0, 0, 0);
-		LocalTime toTime = LocalTime.of(23, 59, 59);
-		OffsetDateTime offsetStartTime = OffsetDateTime.of(startDay, fromTime, ZoneOffset.UTC);
-		OffsetDateTime offsetEndTime = OffsetDateTime.of(endDay, toTime, ZoneOffset.UTC);
-
+	private List<StockBar> fetchHistoricalBars(String ticker, OffsetDateTime startTime, OffsetDateTime endTime,
+			String timeFrame) {
 		List<StockBar> historicalBars = new ArrayList<>();
-		boolean isIntradayRequest = this.isIntradayRequest();
-
-		// Get current time in NYC timezone
-		ZonedDateTime nowInNYC = ZonedDateTime.now(zoneId);
-		LocalDate todayInNYC = nowInNYC.toLocalDate();
-		ZoneOffset currentNYCOffset = nowInNYC.getOffset();
 
 		try {
-			startDay = this.getStartDay(offsetStartTime, offsetEndTime);
-
-			// Update the time range to match the New York time zone
-			offsetStartTime = OffsetDateTime.of(startDay, fromTime, currentNYCOffset);
-			offsetEndTime = OffsetDateTime.of(endDay, toTime, currentNYCOffset);
-
-			// If the request is for intraday data
-			if (isIntradayRequest && startDay.isEqual(todayInNYC)) {
-				// 15-minute delay is required due to API restrictions on the free plan
-				historicalBars = this.alpacaAPI.marketData().stock().stockBarSingle(
-						ticker, timeFrame, offsetStartTime,
-						nowInNYC.toOffsetDateTime().minusMinutes(15),
-						historicalDataLimit, StockAdjustment.ALL, null,
-						StockFeed.SIP, currency, null, Sort.ASC
-				).getBars();
-			} else {
-				// General case
-				historicalBars = this.alpacaAPI.marketData().stock().stockBarSingle(
-						ticker, timeFrame, offsetStartTime, offsetEndTime,
-						historicalDataLimit, StockAdjustment.ALL, null,
-						StockFeed.SIP, currency, null, Sort.ASC
-				).getBars();
-			}
+			historicalBars = this.alpacaAPI.marketData().stock().stockBarSingle(
+					ticker, timeFrame, startTime, endTime,
+					historicalDataLimit, StockAdjustment.ALL, null,
+					StockFeed.SIP, currency, null, Sort.ASC).getBars();
 		} catch (ApiException e) {
 			System.out.println(e.getCode() + "\n" + e.getMessage());
 		}
 
 		return historicalBars;
-	}
-
-	/**
-	 * Determines if the request could be an intraday request.
-	 *
-	 * @return True if the request could be an intraday request, false otherwise.
-	 */
-	private boolean isIntradayRequest() {
-		StackTraceElement[] traceElements = Thread.currentThread().getStackTrace();
-		return traceElements.length > 2 && traceElements[2].getMethodName().equals("get1DHistoricalStockBars");
 	}
 
 	/**
@@ -300,135 +342,92 @@ class AlpacaHistoricalBarsDataService {
 	 * If the ticker is not found, null is returned.
 	 */
 	private List<StockBar> getAppropriateHistoricalBars(String ticker, long daysToSubtract, String timeFrame) {
-		LocalDate todayInNYC = LocalDate.now(zoneId);
-		LocalDate startDay = todayInNYC.minusDays(daysToSubtract);
+		NYCTimeInfo nycTime = this.getNYCTimeInfo();
+		LocalDate startDay = nycTime.today().minusDays(daysToSubtract);
 
-		return this.fetchHistoricalBars(ticker, startDay, todayInNYC, timeFrame);
+		OffsetDateTime startTime = OffsetDateTime.of(startDay, LocalTime.of(0, 0, 0), nycTime.offset());
+		OffsetDateTime endTime = OffsetDateTime.of(nycTime.today(), LocalTime.of(23, 59, 59), nycTime.offset());
+
+		return this.fetchHistoricalBars(ticker, startTime, endTime, timeFrame);
 	}
 
 	/**
-	 * Calculates the last trading day based on the given start and end times.
+	 * Gets the most recent trading day for intraday data, accounting for pre-market hours.
+	 * Uses the cached market calendar.
+	 * <ul>
+	 *   <li>If today is a trading day AND it's before 9:45 AM NYC time → returns previous trading day</li>
+	 *   <li>If today is a trading day AND it's 9:45 AM or later → returns today</li>
+	 *   <li>If today is not a trading day (weekend/holiday) → returns most recent trading day</li>
+	 * </ul>
 	 *
-	 * @param offsetStartTime The start time of the historical data.
-	 * @param offsetEndTime The end time of the historical data.
-	 *
-	 * @return A LocalDate object representing the last trading day.
+	 * @return A LocalDate object representing the appropriate trading day for intraday data.
 	 */
-	private LocalDate getStartDay(OffsetDateTime offsetStartTime,  OffsetDateTime offsetEndTime) {
-		Calendar validLastTradingDay = new Calendar();
-		String validDate = "";
-		try {
-			List<Calendar> marketCalendar = this.alpacaAPI.trader().calendar().
-					getCalendar(offsetStartTime, offsetEndTime, "TRADING");
+	private LocalDate getMostRecentTradingDay() {
+		NYCTimeInfo nycTime = this.getNYCTimeInfo();
+		List<Calendar> marketCalendar = this.getMarketCalendar();
 
-			validLastTradingDay = marketCalendar.getFirst();
-
-		} catch (net.jacobpeterson.alpaca.openapi.trader.ApiException e) {
-			System.out.println(e.getCode() + "\n" + e.getMessage());
-		}
-
-		validDate = validLastTradingDay.getDate();
-		String[] splitValidDate = validDate.split("-");
-
-		// Year-Month-Day
-		return LocalDate.of(Integer.parseUnsignedInt(splitValidDate[0]),
-				Integer.parseUnsignedInt(splitValidDate[1]), Integer.parseUnsignedInt(splitValidDate[2]));
-	}
-
-	/**
-	 * Calculates the last trading day based on the given start and end times.
-	 *
-	 * @param offsetStartTime The start time of the historical data.
-	 * @param offsetEndTime The end time of the historical data.
-	 * @return A LocalDate object representing the last trading day. If an error occurs, null is returned.
-	 */
-	private LocalDate getLastTradingDay(OffsetDateTime offsetStartTime, OffsetDateTime offsetEndTime) {
-		Calendar validLastTradingDay = new Calendar();
-		String validDate = "";
-
-		// Get today's date in NYC timezone
-		LocalDate todayInNYC = LocalDate.now(zoneId);
-
-		try {
-			List<Calendar> marketCalendar = this.alpacaAPI.trader().calendar().
-					getCalendar(offsetStartTime, offsetEndTime, "TRADING");
-
-			// If today (in NYC) is the last trading day, get the second last trading day for yesterday's data
-			if (todayInNYC.toString().equals(marketCalendar.getLast().getDate())) {
-				validLastTradingDay = marketCalendar.get(marketCalendar.size() - 2);
-			} else { // Otherwise (if checking on weekends or holidays), get the last trading day
-				validLastTradingDay = marketCalendar.getLast();
-			}
-
-			validDate = validLastTradingDay.getDate();
-			String[] splitValidDate = validDate.split("-");
-
-			// Year-Month-Day
-			return LocalDate.of(Integer.parseUnsignedInt(splitValidDate[0]),
-					Integer.parseUnsignedInt(splitValidDate[1]), Integer.parseUnsignedInt(splitValidDate[2]));
-
-		} catch (net.jacobpeterson.alpaca.openapi.trader.ApiException e) {
-			System.out.println(e.getCode() + "\n" + e.getMessage());
+		if (marketCalendar == null || marketCalendar.isEmpty()) {
 			return null;
 		}
+
+		Calendar lastTradingDayCalendar = marketCalendar.getLast();
+		boolean isTodayTradingDay = lastTradingDayCalendar.getDate().equals(nycTime.today().toString());
+		boolean isBeforeMarketOpen = nycTime.time().isBefore(LocalTime.of(9, 45));
+
+		Calendar targetDay;
+		if (isTodayTradingDay && isBeforeMarketOpen) {
+			// Pre-market: use previous trading day
+			targetDay = marketCalendar.get(marketCalendar.size() - 2);
+		} else {
+			// During/after market hours or weekend/holiday: use most recent trading day
+			targetDay = lastTradingDayCalendar;
+		}
+
+		String[] splitDate = targetDay.getDate().split("-");
+		return LocalDate.of(Integer.parseUnsignedInt(splitDate[0]),
+				Integer.parseUnsignedInt(splitDate[1]), Integer.parseUnsignedInt(splitDate[2]));
 	}
 
 	/**
-	 * Gets the last two trading days based on the given start and end times.
+	 * Gets the last two trading days using the cached market calendar.
 	 *
-	 * @param offsetStartTime The start time of the historical data.
-	 * @param offsetEndTime The end time of the historical data.
 	 * @return A list of LocalDate objects representing the last two trading days. The older date is given first and
 	 * the later date is given second. If the request is done during pre-market hours, the last trading day is
 	 * yesterday and the second last trading day is the day before yesterday. If an error occurs, null is returned.
 	 */
-	private List<LocalDate> getLastTwoTradingDays(OffsetDateTime offsetStartTime, OffsetDateTime offsetEndTime) {
+	private List<LocalDate> getLastTwoTradingDays() {
 		List<LocalDate> dates = new ArrayList<>();
-		Calendar secondlastValidLastTradingDay = new Calendar();
-		String secondlastValidDate = "";
-		Calendar validLastTradingDay = new Calendar();
-		String validLastDate = "";
+		NYCTimeInfo nycTime = this.getNYCTimeInfo();
+		List<Calendar> marketCalendar = this.getMarketCalendar();
 
-		// Get current time in NYC timezone for accurate comparisons
-		ZonedDateTime nowInNYC = ZonedDateTime.now(zoneId);
-		LocalDate todayInNYC = nowInNYC.toLocalDate();
-		LocalTime currentTimeInNYC = nowInNYC.toLocalTime();
-
-		try {
-			List<Calendar> marketCalendar = this.alpacaAPI.trader().calendar().
-					getCalendar(offsetStartTime, offsetEndTime, "TRADING");
-
-			// If today (in NYC) is the most recent trading day, and it's before 9:45 AM ET,
-			// the data must be for yesterday and day before yesterday.
-			boolean isTodayLastTradingDay = marketCalendar.getLast().getDate().equals(todayInNYC.toString());
-			boolean isBeforeMarketOpen = currentTimeInNYC.isBefore(LocalTime.of(9, 45));
-
-			if (isTodayLastTradingDay && isBeforeMarketOpen) {
-				secondlastValidLastTradingDay = marketCalendar.get(marketCalendar.size() - 3);
-				validLastTradingDay = marketCalendar.get(marketCalendar.size() - 2);
-			} else { // If it's after 9:45 AM on the most recent trading day or on weekends/holidays, get the last two trading days
-				secondlastValidLastTradingDay = marketCalendar.get(marketCalendar.size() - 2);
-				validLastTradingDay = marketCalendar.getLast();
-			}
-
-			secondlastValidDate = secondlastValidLastTradingDay.getDate();
-			String[] splitSecondlastValidDate = secondlastValidDate.split("-");
-
-			validLastDate = validLastTradingDay.getDate();
-			String[] splitLastValidDate = validLastDate.split("-");
-
-			dates.add(LocalDate.of(Integer.parseUnsignedInt(splitSecondlastValidDate[0]),
-					Integer.parseUnsignedInt(splitSecondlastValidDate[1]), Integer.parseUnsignedInt(splitSecondlastValidDate[2])));
-
-			dates.add(LocalDate.of(Integer.parseUnsignedInt(splitLastValidDate[0]),
-					Integer.parseUnsignedInt(splitLastValidDate[1]), Integer.parseUnsignedInt(splitLastValidDate[2])));
-
-			// Year-Month-Day
-			return dates;
-
-		} catch (net.jacobpeterson.alpaca.openapi.trader.ApiException e) {
-			System.out.println(e.getCode() + "\n" + e.getMessage());
+		if (marketCalendar == null || marketCalendar.size() < 3) {
 			return null;
 		}
+
+		// If today (in NYC) is the most recent trading day, and it's before 9:45 AM ET,
+		// the data must be for yesterday and day before yesterday.
+		boolean isTodayLastTradingDay = marketCalendar.getLast().getDate().equals(nycTime.today().toString());
+		boolean isBeforeMarketOpen = nycTime.time().isBefore(LocalTime.of(9, 45));
+
+		Calendar secondLastTradingDay;
+		Calendar lastTradingDay;
+		if (isTodayLastTradingDay && isBeforeMarketOpen) {
+			secondLastTradingDay = marketCalendar.get(marketCalendar.size() - 3);
+			lastTradingDay = marketCalendar.get(marketCalendar.size() - 2);
+		} else {
+			secondLastTradingDay = marketCalendar.get(marketCalendar.size() - 2);
+			lastTradingDay = marketCalendar.getLast();
+		}
+
+		String[] splitSecondLast = secondLastTradingDay.getDate().split("-");
+		String[] splitLast = lastTradingDay.getDate().split("-");
+
+		dates.add(LocalDate.of(Integer.parseUnsignedInt(splitSecondLast[0]),
+				Integer.parseUnsignedInt(splitSecondLast[1]), Integer.parseUnsignedInt(splitSecondLast[2])));
+
+		dates.add(LocalDate.of(Integer.parseUnsignedInt(splitLast[0]),
+				Integer.parseUnsignedInt(splitLast[1]), Integer.parseUnsignedInt(splitLast[2])));
+
+		return dates;
 	}
 }
