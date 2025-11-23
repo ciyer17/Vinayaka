@@ -1,12 +1,11 @@
 package com.iyer.vinayaka.entities;
 
+import com.iyer.vinayaka.util.UIUtils;
 import jakarta.persistence.*;
-
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 
-import com.iyer.vinayaka.util.UIUtils;
 @Entity
 @Table(name = "user_settings")
 @Data
@@ -17,22 +16,22 @@ public class UserSettings {
 	private int id;
 
 	@NonNull
-	@Column(name = "api_key", nullable = false, columnDefinition = "varchar(" + UIUtils.API_KEY_LEN + ")")
+	@Column(name = "api_key", nullable = false, length = UIUtils.API_KEY_LEN)
 	private String API_KEY;
 
 	@NonNull
-	@Column(name = "api_secret", nullable = false, columnDefinition = "varchar(" + UIUtils.API_SECRET_LEN + ")")
+	@Column(name = "api_secret", nullable = false, length = UIUtils.API_SECRET_LEN)
 	private String API_SECRET;
 
 	@NonNull
-	@Column(nullable = false, columnDefinition = "integer default 10")
-	private Integer refresh_interval;
+	@Column(nullable = false)
+	private Integer refresh_interval = 10;
 
 	@NonNull
-	@Column(nullable = false, columnDefinition = "bool default true")
-	private Boolean dark_mode;
+	@Column(nullable = false)
+	private Boolean dark_mode = true;
 
 	@NonNull
-	@Column(nullable = false, columnDefinition = "varchar(255) default 'America/New_York'")
-	private String timezone;
+	@Column(nullable = false)
+	private String timezone = "America/New_York";
 }

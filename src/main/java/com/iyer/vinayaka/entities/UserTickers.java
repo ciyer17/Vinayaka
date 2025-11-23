@@ -13,17 +13,17 @@ import lombok.Data;
 @AllArgsConstructor
 public class UserTickers {
 	@Id
-	@Column(nullable = false, columnDefinition = "varchar(30)")
+	@Column(nullable = false, length = 30)
 	private String symbol;
-	
-	@Column(nullable = false, columnDefinition = "varchar(255)")
+
+	@Column(nullable = false)
 	private String name;
-	
-	@Column(nullable = false, columnDefinition = "varchar(20)")
+
+	@Column(nullable = false, length = 20)
 	private String exchange;
-	
+
 	@Column(name = "is_favorite", nullable = false)
 	private boolean favorite;
-	
+
 	public UserTickers() {}
 }

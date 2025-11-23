@@ -1,5 +1,6 @@
 package com.iyer.vinayaka;
 
+import com.iyer.vinayaka.config.DatabaseConfiguration;
 import com.iyer.vinayaka.events.StageReadyEvent;
 import javafx.application.Application;
 import javafx.application.HostServices;
@@ -14,7 +15,9 @@ public class VinayakaUI extends Application {
 	
 	@Override
 	public void init() {
-		context = new SpringApplicationBuilder(VinayakaApplication.class).run();
+		context = new SpringApplicationBuilder(VinayakaApplication.class)
+				.initializers(new DatabaseConfiguration())
+				.run();
 	}
 	
 	@Override
