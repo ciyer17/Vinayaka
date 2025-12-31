@@ -9,6 +9,7 @@ import com.iyer.vinayaka.util.DataHolder;
 import com.iyer.vinayaka.util.TickerRefresher;
 import com.iyer.vinayaka.util.UIUtils;
 import jakarta.annotation.PostConstruct;
+import javafx.animation.FadeTransition;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
@@ -23,6 +24,7 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
+import javafx.util.Duration;
 import net.jacobpeterson.alpaca.openapi.marketdata.model.StockBar;
 import net.jacobpeterson.alpaca.openapi.trader.model.Assets;
 import org.springframework.context.ApplicationContext;
@@ -174,21 +176,19 @@ public class MainViewController implements Initializable {
 			tickerGrid.getColumnConstraints().add(column);
 		}
 		
-		// Create a VBox for each ticker
-		List<VBox> tickerBoxes = priceChange.keySet().parallelStream().sorted().map(
+		// Create a StackPane for each ticker with delete icon
+		List<StackPane> tickerBoxes = priceChange.keySet().parallelStream().sorted().map(
 				tickerSymbol -> {
 					Double latestTradePrice = latestBars.get(tickerSymbol).getLast().getC();
 					Double priceChangePercentage = priceChange.get(tickerSymbol);
-					
+
 					Label tickerNameLabel = new Label(tickerSymbol);
 					Label tickerPriceLabel = new Label(Double.toString(latestTradePrice));
 					Label tickerChangeLabel = new Label(priceChangePercentage + "%");
-					
-					VBox tickerBox = new VBox(tickerNameLabel, tickerPriceLabel, tickerChangeLabel);
-					VBox.setMargin(tickerBox, new Insets(50, 50, 50, 50));
-					tickerBox.setCursor(Cursor.HAND);
-					tickerBox.setAlignment(Pos.CENTER);
-					tickerBox.getChildren().stream().map(Label.class::cast).forEach(label -> {
+
+					VBox tickerInfoBox = new VBox(tickerNameLabel, tickerPriceLabel, tickerChangeLabel);
+					tickerInfoBox.setAlignment(Pos.CENTER);
+					tickerInfoBox.getChildren().stream().map(Label.class::cast).forEach(label -> {
 						label.setPadding(new Insets(0, 0, 5, 0));
 						label.getStylesheets().removeAll("tickerPositive", "tickerNegative", "tickerZero");
 						if (priceChangePercentage > 0) {
@@ -199,18 +199,32 @@ public class MainViewController implements Initializable {
 							label.getStyleClass().add("tickerZero");
 						}
 					});
-					
-					return tickerBox;
+
+					// Create delete icon
+					ImageView deleteIcon = createDeleteIcon(tickerSymbol);
+
+					// Wrap in StackPane for layering
+					StackPane tickerContainer = new StackPane(tickerInfoBox, deleteIcon);
+					StackPane.setAlignment(deleteIcon, Pos.BOTTOM_RIGHT);
+					StackPane.setMargin(deleteIcon, new Insets(0, 10, 10, 0));
+					StackPane.setMargin(tickerContainer, new Insets(50, 50, 50, 50));
+					tickerContainer.setCursor(Cursor.HAND);
+
+					// Add hover handlers to show/hide delete icon
+					tickerContainer.setOnMouseEntered(e -> deleteIcon.setVisible(true));
+					tickerContainer.setOnMouseExited(e -> deleteIcon.setVisible(false));
+
+					return tickerContainer;
 				}
-		).toList(); // Collect all the VBoxes into a list.
+		).toList(); // Collect all the StackPanes into a list.
 		
 		// AtomicInteger is required for lambda expressions, as they require final or effectively final variables.
 		AtomicInteger col = new AtomicInteger(0);
 		AtomicInteger row = new AtomicInteger(0);
-		
-		// Add each of the VBoxes to the GridPane
-		tickerBoxes.forEach(tickerBox -> {
-			tickerGrid.add(tickerBox, col.get(), row.get());
+
+		// Add each of the StackPanes to the GridPane
+		tickerBoxes.forEach(tickerContainer -> {
+			tickerGrid.add(tickerContainer, col.get(), row.get());
 			col.incrementAndGet();
 			if (col.get() == MAX_COLUMNS) {
 				col.set(0);
@@ -229,7 +243,69 @@ public class MainViewController implements Initializable {
 			this.tickerScrollPane.setContent(tickerGrid);
 		});
 	}
-	
+
+	/**
+	 * Creates a delete icon ImageView for the specified ticker symbol.
+	 * The icon is initially hidden and appears on hover. When clicked, it shows
+	 * a confirmation dialog and deletes the ticker if confirmed.
+	 *
+	 * @param tickerSymbol The symbol of the ticker this delete icon is associated with.
+	 * @return An ImageView configured as a delete button.
+	 */
+	private ImageView createDeleteIcon(String tickerSymbol) {
+		Image deleteImage = new Image(Objects.requireNonNull(
+			getClass().getResourceAsStream(UIUtils.DELETE_ICON)
+		));
+		ImageView deleteIcon = new ImageView(deleteImage);
+		deleteIcon.setFitWidth(20);
+		deleteIcon.setFitHeight(20);
+		deleteIcon.setPreserveRatio(true);
+		deleteIcon.setVisible(false);
+		deleteIcon.setCursor(Cursor.HAND);
+		deleteIcon.setOnMouseClicked(event -> {
+			handleDeleteTicker(tickerSymbol, event);
+			event.consume(); // Prevent event propagation
+		});
+		return deleteIcon;
+	}
+
+	/**
+	 * Handles the deletion of a ticker. Shows a confirmation dialog, and if the user confirms,
+	 * animates the ticker fading out, then removes it from the database and refreshes the grid.
+	 *
+	 * @param tickerSymbol The symbol of the ticker to delete.
+	 * @param event The mouse event that triggered the deletion (used to find the parent container).
+	 */
+	private void handleDeleteTicker(String tickerSymbol, MouseEvent event) {
+		// Show confirmation dialog
+		boolean confirmed = this.uiUtils.showConfirmationDialog(
+			"Delete Ticker",
+			"Are you sure you want to delete " + tickerSymbol + "?"
+		);
+
+		if (!confirmed) {
+			return;
+		}
+
+		// Find the StackPane container
+		ImageView deleteIcon = (ImageView) event.getSource();
+		StackPane tickerContainer = (StackPane) deleteIcon.getParent();
+
+		// Create fade-out animation
+		FadeTransition fadeOut = new FadeTransition(Duration.millis(500), tickerContainer);
+		fadeOut.setFromValue(1.0);
+		fadeOut.setToValue(0.0);
+
+		// Delete from database and refresh grid after animation completes
+		fadeOut.setOnFinished(e -> {
+			this.userTickersService.deleteTicker(tickerSymbol);
+			List<UserTickers> updatedTickers = this.userTickersService.getAllTickersSortedBySymbol();
+			this.fetchInfoAndPopulate(updatedTickers);
+		});
+
+		fadeOut.play();
+	}
+
 	/**
 	 * Sets the background of the application based on the dark mode setting.
 	 *
@@ -271,14 +347,19 @@ public class MainViewController implements Initializable {
 		if (!tickers.isEmpty()) {
 			List<Map<String, ?>> priceChangeAndTrades = this.alpacaMarketDataService.
 					getPriceChangePercentages((tickers.stream().map(UserTickers::getSymbol).toList()));
-			
+
+			// Check if market data was successfully fetched before accessing elements
+			if (priceChangeAndTrades.isEmpty() || priceChangeAndTrades.size() < 2) {
+				return;
+			}
+
 			// For the below, we know for a fact that the first element is a Map<String, List<StockBar>> and the second
 			// element is a Map<String, Double>. We can safely cast them to their respective types.
 			@SuppressWarnings("unchecked")
 			Map<String, List<StockBar>> latestStockBars = (Map<String, List<StockBar>>) priceChangeAndTrades.getFirst();
 			@SuppressWarnings("unchecked")
 			Map<String, Double> priceChange = (Map<String, Double>) priceChangeAndTrades.getLast();
-			
+
 			this.populateGrid(latestStockBars, priceChange);
 		}
 	}

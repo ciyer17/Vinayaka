@@ -5,7 +5,10 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
+import javafx.scene.control.ButtonType;
 import javafx.stage.Stage;
+
+import java.util.Optional;
 import net.jacobpeterson.alpaca.AlpacaAPI;
 import net.jacobpeterson.alpaca.model.util.apitype.MarketDataWebsocketSourceType;
 import net.jacobpeterson.alpaca.model.util.apitype.TraderAPIEndpointType;
@@ -25,6 +28,7 @@ public class UIUtils {
 	public static final String DARK_MODE_IMG = "/icons/settings-dark-mode.png";
 	public static final String LIGHT_MODE_IMG = "/icons/settings-light-mode.png";
 	public static final String SEARCH_TICKER = "/icons/search-ticker.png";
+	public static final String DELETE_ICON = "/icons/delete.png";
 
 	public static final String DARK_MODE_BG = "appBackground";
 	public static final String LIGHT_MODE_BG = "appBackgroundLight";
@@ -64,16 +68,31 @@ public class UIUtils {
 
 	/**
 	 * Shows the specified alert.
-	 * @param title The title of the alert window.
+	 * 
+	 * @param title        The title of the alert window.
 	 * @param alertMessage The message to display in the alert window.
-	 * @param alertType The type of alert to display.
+	 * @param alertType    The type of alert to display.
+	 * @return The ButtonType clicked by the user, or empty if dialog was closed.
 	 */
-	public void showAlert(String title, String alertMessage, AlertType alertType) {
+	public Optional<ButtonType> showAlert(String title, String alertMessage, AlertType alertType) {
 		Alert alert = new Alert(alertType);
 		alert.setTitle(title);
 		alert.setHeaderText(null);
 		alert.setContentText(alertMessage);
-		alert.showAndWait();
+		return alert.showAndWait();
+	}
+
+	/**
+	 * Shows a confirmation dialog with Yes/No buttons.
+	 *
+	 * @param title   The title of the confirmation dialog.
+	 * @param message The confirmation message to display.
+	 * @return True if the user clicked Yes, false if the user clicked No or closed
+	 *         the dialog.
+	 */
+	public boolean showConfirmationDialog(String title, String message) {
+		Optional<ButtonType> result = showAlert(title, message, AlertType.CONFIRMATION);
+		return result.isPresent() && (result.get() == ButtonType.YES || result.get() == ButtonType.OK);
 	}
 
 	/**
