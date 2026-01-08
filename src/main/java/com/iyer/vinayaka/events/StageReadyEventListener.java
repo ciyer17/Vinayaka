@@ -1,12 +1,16 @@
 package com.iyer.vinayaka.events;
 
 import com.iyer.vinayaka.util.DataHolder;
+import com.iyer.vinayaka.util.ExitHandler;
 import com.iyer.vinayaka.util.UIUtils;
+
+import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationListener;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 
@@ -16,12 +20,12 @@ import java.io.IOException;
 public class StageReadyEventListener implements ApplicationListener<StageReadyEvent> {
 	private final ApplicationContext context;
 	private final DataHolder dataHolder;
-	
+
 	public StageReadyEventListener(ApplicationContext context, DataHolder holder) {
 		this.context = context;
 		this.dataHolder = holder;
 	}
-	
+
 	@Override
 	public void onApplicationEvent(@NonNull StageReadyEvent event) {
 		Stage stage = event.getStage();
@@ -38,5 +42,31 @@ public class StageReadyEventListener implements ApplicationListener<StageReadyEv
 			throw new RuntimeException(e);
 		}
 		stage.show();
+	}
+
+	public static void exitHandler(@NonNull Stage stage, @NonNull ConfigurableApplicationContext context) {
+		stage.setOnCloseRequest(e -> {
+			e.consume();
+
+			ExitHandler handler = context.getBean(ExitHandler.class);
+
+			Thread t = new Thread(() -> {
+				try {
+					handler.onExit();
+				} finally {
+					Platform.runLater(() -> {
+						try {
+							// Triggers all @PreDestroy methods and closes the context
+							context.close();
+						} finally {
+							// Ensure the JavaFX application exits
+							Platform.exit();
+						}
+					});
+				}
+			}, "Exit-Cleanup-Thread");
+			t.setDaemon(true);
+			t.start();
+		});
 	}
 }

@@ -22,20 +22,23 @@ public class TickerRefresher {
 	private final UserTickersService userTickersService;
 	private final ScheduledExecutorService executor;
 	private final ApplicationContext context;
-	
+
 	public TickerRefresher(UserSettingsService service, UserTickersService tickersService, ApplicationContext context) {
 		this.userSettingsService = service;
 		this.userTickersService = tickersService;
 		this.executor = Executors.newSingleThreadScheduledExecutor();
 		this.context = context;
 	}
-	
+
 	@EventListener
 	public void handleContextCloseEvent(ContextClosedEvent event) {
 		System.out.println("Context closed. Stopping refresh.");
 		this.stopRefresh();
 	}
-	
+
+	/**
+	 * Starts the ticker refresh process based on user settings.
+	 */
 	public void startRefresh() {
 		UserSettings settings;
 		if (this.userSettingsService.getUserSettings().isPresent()) {
@@ -43,21 +46,28 @@ public class TickerRefresher {
 		} else {
 			throw new RuntimeException("User settings not found. Cannot start refresh.");
 		}
-		
+
 		MainViewController mainViewController = this.context.getBean(MainViewController.class);
-		
+
 		int refreshInterval = settings.getRefresh_interval();
 		// Need to run this on the JavaFX Application Thread to prevent the infamous
 		// "Not on FX application thread; currentThread = main" error.
 		Platform.runLater(() -> {
 			this.executor.scheduleAtFixedRate(() -> {
-				List<UserTickers> tickers = this.userTickersService.getAllTickersSortedBySymbol();
+				List<UserTickers> tickers = this.userTickersService.getAllTickersWithFavoritesFirst();
 				mainViewController.fetchInfoAndPopulate(tickers);
 			}, 0, refreshInterval, TimeUnit.SECONDS);
 		});
 	}
-	
+
+	/**
+	 * Stops the ticker refresh process and shuts down the JavaFX application.
+	 */
 	public void stopRefresh() {
+		ExitHandler handler = this.context.getBean(ExitHandler.class);
+		handler.onExit();
 		this.executor.shutdown();
+		System.out.println("Refresh stopped.");
+		Platform.exit();
 	}
 }

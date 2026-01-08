@@ -20,6 +20,7 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
+import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
@@ -33,6 +34,7 @@ import org.springframework.stereotype.Component;
 import java.net.URL;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 @Component
 public class MainViewController implements Initializable {
@@ -42,7 +44,7 @@ public class MainViewController implements Initializable {
 	@FXML private TextField searchTickerTextField;
 	@FXML private ImageView searchTickerButton;
 	@FXML private HBox searchHbox;
-	
+
 	private final UserSettingsService userSettingsService;
 	private final UIUtils uiUtils;
 	private final DataHolder dataHolder;
@@ -51,7 +53,7 @@ public class MainViewController implements Initializable {
 	private final List<Assets> assets;
 	private final ApplicationContext context;
 	private TickerRefresher tickerRefresher;
-	
+
 	public MainViewController(UserSettingsService userSettingsService, UserTickersService service,
 							  UIUtils uiUtils, DataHolder dataHolder, AlpacaMarketDataService alpacaMarketDataService,
 							  ApplicationContext context) {
@@ -63,7 +65,7 @@ public class MainViewController implements Initializable {
 		this.context = context;
 		this.assets = this.alpacaMarketDataService.getAllAssets();
 	}
-	
+
 	/**
 	 * Initializes the TickerRefresher bean. This has to be done separately to prevent a circular dependency situation.
 	 */
@@ -71,7 +73,7 @@ public class MainViewController implements Initializable {
 	public void initTickerRefresher() {
 		this.tickerRefresher = this.context.getBean(TickerRefresher.class);
 	}
-	
+
 	/**
 	 * Initializes the MainViewController. Handles window resizing for elements, sets the background of the application,
 	 * fetches the user's settings, and starts the ticker refresher.
@@ -80,26 +82,26 @@ public class MainViewController implements Initializable {
 	 */
 	@Override
 	public void initialize(URL url, ResourceBundle resourceBundle) {
-		
+
 		// Handle window resizing for elements
 		this.mainAnchorPane.widthProperty().addListener((obs, oldVal, newVal) -> {
 			// The subtraction of half the width of the searchHbox is necessary to center the Hbox.
 			double width = this.mainAnchorPane.getWidth() / 2 - (this.searchHbox.getPrefWidth() / 2);
 			AnchorPane.setLeftAnchor(this.searchHbox, width);
 		});
-		
+
 		try {
 			UserSettings settings = this.userSettingsService.getUserSettings().get();
 			this.dataHolder.setUserSettings(settings);
-			
+
 			this.setBackground(settings.getDark_mode());
-			List<UserTickers> tickers = this.userTickersService.getAllTickersSortedBySymbol();
+			List<UserTickers> tickers = this.userTickersService.getAllTickersWithFavoritesFirst();
 			this.fetchInfoAndPopulate(tickers);
-			
+
 			Platform.runLater(() -> {
 				this.tickerRefresher.startRefresh();
 			});
-			
+
 		} catch (NoSuchElementException n) {
 			// runLater() defers execution until after MainView is fully initialized. This prevents an
 			// overwrite where MainView is rendered, then APISecrets is rendered, then MainView is rendered again.
@@ -108,7 +110,7 @@ public class MainViewController implements Initializable {
 			});
 		}
 	}
-	
+
 	/**
 	 * Navigates to the settings page.
 	 *
@@ -117,7 +119,7 @@ public class MainViewController implements Initializable {
 	public void navigateToSettingsPage(MouseEvent event) {
 		this.uiUtils.navigateToSpecifiedPage(UIUtils.UPDATE_SETTINGS_VIEW, this.getClass());
 	}
-	
+
 	/**
 	 * Searches for a ticker symbol and adds it to the user's list of tickers if it exists.
 	 *
@@ -131,15 +133,15 @@ public class MainViewController implements Initializable {
 			// Determine if the searched ticker symbol is a valid ticker whose information is available on Alpaca Markets
 			boolean tickerExists = this.assets.parallelStream().anyMatch(asset -> asset.getSymbol().equals(tickerSymbol));
 			if (tickerExists) {
-				boolean tickerAlreadyAdded = this.userTickersService.getAllTickersSortedBySymbol().parallelStream()
+				boolean tickerAlreadyAdded = this.userTickersService.getAllTickersWithFavoritesFirst().parallelStream()
 						.anyMatch(ticker -> ticker.getSymbol().equals(tickerSymbol));
 				if (!tickerAlreadyAdded) {
 					Map<String, String> nameAndExchange = this.alpacaMarketDataService.getTickerNameAndExchange(tickerSymbol);
 					UserTickers ticker = new UserTickers(tickerSymbol,nameAndExchange.get("officialName"),
 							nameAndExchange.get("listedExchange"), false);
 					this.userTickersService.addTicker(ticker);
-					
-					this.fetchInfoAndPopulate(this.userTickersService.getAllTickersSortedBySymbol());
+
+					this.fetchInfoAndPopulate(this.userTickersService.getAllTickersWithFavoritesFirst());
 				} else {
 					this.uiUtils.showAlert("Ticker Already Added",
 							"You have already added " + "\"" + tickerSymbol + "\"!", Alert.AlertType.INFORMATION);
@@ -150,7 +152,7 @@ public class MainViewController implements Initializable {
 			}
 		}
 	}
-	
+
 	/**
 	 * Creates a grid of tickers, lists them in alphabetical order, and colors them based on their price change.
 	 *
@@ -166,19 +168,41 @@ public class MainViewController implements Initializable {
 		tickerGrid.getChildren().clear();
 		tickerGrid.getRowConstraints().clear();
 		tickerGrid.getColumnConstraints().clear();
-		
+
 		int MAX_COLUMNS = 3;
-		
+
 		for (int i = 0; i < MAX_COLUMNS; i++) {
 			ColumnConstraints column = new ColumnConstraints();
 			column.setPercentWidth(100.00 / MAX_COLUMNS);
 			column.setHgrow(Priority.ALWAYS);
 			tickerGrid.getColumnConstraints().add(column);
 		}
-		
-		// Create a StackPane for each ticker with delete icon
-		List<StackPane> tickerBoxes = priceChange.keySet().parallelStream().sorted().map(
+
+		// Create a map for quick ticker lookup by symbol
+		// This retrieves all tickers from the database (with favorites first)
+		// then converts the list to a Map<String, UserTickers> where:
+		// - Key: The ticker symbol (e.g., "AAPL")
+		// - Value: The UserTickers object containing all ticker information
+		// The collect() method uses Collectors.toMap() to build this mapping
+		// UserTickers::getSymbol extracts the key from each ticker object
+		// ticker -> ticker keeps the entire ticker object as the value
+		Map<String, UserTickers> tickerMap = this.userTickersService.getAllTickersWithFavoritesFirst()
+				.stream()
+				.collect(Collectors.toMap(UserTickers::getSymbol, ticker -> ticker));
+
+		// Create a StackPane container for each ticker with delete and favorite icons
+		// The process:
+		// 1. Start with priceChange.keySet() - gets all ticker symbols
+		// 2. parallelStream() - processes tickers in parallel for better performance
+		// 3. sorted() - sorts ticker symbols alphabetically (A-Z)
+		// 4. map() - transforms each ticker symbol into a StackPane visual container
+		// 5. toList() - collects all StackPanes into a list for rendering
+		// Build UI nodes on the FX thread; parallel streams can create nodes
+		// off-thread.
+		List<StackPane> tickerBoxes = priceChange.keySet().stream().sorted().map(
 				tickerSymbol -> {
+					// Retrieve the full ticker object from the map using the symbol
+					UserTickers ticker = tickerMap.get(tickerSymbol);
 					Double latestTradePrice = latestBars.get(tickerSymbol).getLast().getC();
 					Double priceChangePercentage = priceChange.get(tickerSymbol);
 
@@ -203,21 +227,32 @@ public class MainViewController implements Initializable {
 					// Create delete icon
 					ImageView deleteIcon = createDeleteIcon(tickerSymbol);
 
-					// Wrap in StackPane for layering
-					StackPane tickerContainer = new StackPane(tickerInfoBox, deleteIcon);
+					// Create favorite icon
+					ImageView favoriteIcon = createFavoriteIcon(ticker);
+
+					// Wrap in StackPane for layering with both icons
+					StackPane tickerContainer = new StackPane(tickerInfoBox, deleteIcon, favoriteIcon);
 					StackPane.setAlignment(deleteIcon, Pos.BOTTOM_RIGHT);
+					StackPane.setAlignment(favoriteIcon, Pos.BOTTOM_LEFT);
 					StackPane.setMargin(deleteIcon, new Insets(0, 10, 10, 0));
+					StackPane.setMargin(favoriteIcon, new Insets(0, 0, 10, 10));
 					StackPane.setMargin(tickerContainer, new Insets(50, 50, 50, 50));
 					tickerContainer.setCursor(Cursor.HAND);
 
-					// Add hover handlers to show/hide delete icon
-					tickerContainer.setOnMouseEntered(e -> deleteIcon.setVisible(true));
-					tickerContainer.setOnMouseExited(e -> deleteIcon.setVisible(false));
+					// Add hover handlers to show/hide both icons
+					tickerContainer.setOnMouseEntered(e -> {
+						deleteIcon.setVisible(true);
+						favoriteIcon.setVisible(true);
+					});
+					tickerContainer.setOnMouseExited(e -> {
+						deleteIcon.setVisible(false);
+						favoriteIcon.setVisible(false);
+					});
 
 					return tickerContainer;
 				}
 		).toList(); // Collect all the StackPanes into a list.
-		
+
 		// AtomicInteger is required for lambda expressions, as they require final or effectively final variables.
 		AtomicInteger col = new AtomicInteger(0);
 		AtomicInteger row = new AtomicInteger(0);
@@ -237,11 +272,8 @@ public class MainViewController implements Initializable {
 		});
 		tickerGrid.setHgap(50);
 		tickerGrid.setVgap(50);
-		
-		// Need to run this on the JavaFX Application Thread, as this is a UI update.
-		Platform.runLater(() -> {
-			this.tickerScrollPane.setContent(tickerGrid);
-		});
+
+		this.tickerScrollPane.setContent(tickerGrid);
 	}
 
 	/**
@@ -257,9 +289,10 @@ public class MainViewController implements Initializable {
 			getClass().getResourceAsStream(UIUtils.DELETE_ICON)
 		));
 		ImageView deleteIcon = new ImageView(deleteImage);
-		deleteIcon.setFitWidth(20);
-		deleteIcon.setFitHeight(20);
+		deleteIcon.setFitWidth(UIUtils.ICON_SIZE);
+		deleteIcon.setFitHeight(UIUtils.ICON_SIZE);
 		deleteIcon.setPreserveRatio(true);
+		deleteIcon.setPickOnBounds(true); // Use the full bounds as the hit target for reliable clicks.
 		deleteIcon.setVisible(false);
 		deleteIcon.setCursor(Cursor.HAND);
 		deleteIcon.setOnMouseClicked(event -> {
@@ -270,11 +303,48 @@ public class MainViewController implements Initializable {
 	}
 
 	/**
-	 * Handles the deletion of a ticker. Shows a confirmation dialog, and if the user confirms,
-	 * animates the ticker fading out, then removes it from the database and refreshes the grid.
+	 * Creates a favorite icon ImageView for the specified ticker.
+	 * The icon changes based on favorite status (filled vs outline).
+	 * Initially hidden, appears on hover. Toggles favorite status on click.
+	 *
+	 * @param ticker The ticker this favorite icon is associated with.
+	 * @return An ImageView configured as a favorite toggle button.
+	 */
+	private ImageView createFavoriteIcon(UserTickers ticker) {
+		String iconPath = ticker.isFavorite() ? UIUtils.FAVORITE_ICON_FILLED : UIUtils.FAVORITE_ICON_OUTLINE;
+
+		Image favoriteImage = new Image(Objects.requireNonNull(
+				getClass().getResourceAsStream(iconPath)));
+		ImageView favoriteIcon = new ImageView(favoriteImage);
+		favoriteIcon.setFitWidth(UIUtils.ICON_SIZE);
+		favoriteIcon.setFitHeight(UIUtils.ICON_SIZE);
+		favoriteIcon.setPreserveRatio(true);
+		favoriteIcon.setPickOnBounds(true); // Outline icon has transparent pixels; bounds hit-testing avoids misses.
+		favoriteIcon.setVisible(false);
+		favoriteIcon.setCursor(Cursor.HAND);
+
+		favoriteIcon.setOnMouseClicked(event -> {
+			// Handle the toggle
+			System.out.println("Click detected on favorite icon for: " + ticker.getSymbol());
+
+			handleToggleFavorite(ticker.getSymbol(), event);
+			event.consume();
+		});
+
+		return favoriteIcon;
+	}
+
+	/**
+	 *
+	 * Handles the deletion of a ticker. Shows a confirmation dialog, and if the
+	 * user confirms,
+	 * animates the ticker fading out, then removes it from the database and
+	 * refreshes the grid.
+	 *
 	 *
 	 * @param tickerSymbol The symbol of the ticker to delete.
-	 * @param event The mouse event that triggered the deletion (used to find the parent container).
+	 * @param event        The mouse event that triggered the deletion (used to find
+	 *                     the parent container).
 	 */
 	private void handleDeleteTicker(String tickerSymbol, MouseEvent event) {
 		// Show confirmation dialog
@@ -299,11 +369,51 @@ public class MainViewController implements Initializable {
 		// Delete from database and refresh grid after animation completes
 		fadeOut.setOnFinished(e -> {
 			this.userTickersService.deleteTicker(tickerSymbol);
-			List<UserTickers> updatedTickers = this.userTickersService.getAllTickersSortedBySymbol();
+			List<UserTickers> updatedTickers = this.userTickersService.getAllTickersWithFavoritesFirst();
 			this.fetchInfoAndPopulate(updatedTickers);
 		});
 
 		fadeOut.play();
+	}
+
+	/**
+	 * Handles toggling the favorite status of a ticker.
+	 * Updates the database and refreshes the grid with a brief pulse animation.
+	 *
+	 * @param tickerSymbol The symbol of the ticker to toggle.
+	 * @param event        The mouse event that triggered the toggle.
+	 */
+	private void handleToggleFavorite(String tickerSymbol, MouseEvent event) {
+		// Get the icon
+		ImageView favoriteIcon = (ImageView) event.getSource();
+
+		// Keep icon visible during the operation to prevent hover interference
+		favoriteIcon.setVisible(true);
+
+		Tooltip tooltip = new Tooltip("");
+
+		// Toggle in database immediately
+		if (this.userTickersService.toggleFavorite(tickerSymbol).isFavorite()) {
+			tooltip.setText("Unfavorite");
+		} else {
+			tooltip.setText("Favorite");
+		}
+		Tooltip.install(favoriteIcon, tooltip);
+
+		// Brief pulse animation for visual feedback
+		FadeTransition pulse = new FadeTransition(Duration.millis(100), favoriteIcon);
+		pulse.setFromValue(1.0); // Start fully visible (100% opacity).
+		pulse.setToValue(0.3); // Fade down to 30% opacity at the lowest point.
+		pulse.setCycleCount(1); // Run the fade down + up twice total.
+		pulse.setAutoReverse(true); // Reverse at the end of each cycle (fade back up).
+
+		// Refresh grid after quick animation
+		pulse.setOnFinished(e -> {
+			List<UserTickers> updatedTickers = this.userTickersService.getAllTickersWithFavoritesFirst();
+			this.fetchInfoAndPopulate(updatedTickers);
+		});
+
+		pulse.play();
 	}
 
 	/**
@@ -318,7 +428,7 @@ public class MainViewController implements Initializable {
 				getResourceAsStream(UIUtils.LIGHT_MODE_IMG)));
 		Image searchTicker = new Image(Objects.requireNonNull(getClass().
 				getResourceAsStream(UIUtils.SEARCH_TICKER)));
-		
+
 		if (darkMode) {
 			this.settingsImageView.setImage(darkCog);
 			this.mainAnchorPane.getStyleClass().removeAll(UIUtils.DARK_MODE_BG, UIUtils.LIGHT_MODE_BG);
@@ -337,7 +447,7 @@ public class MainViewController implements Initializable {
 		}
 		this.searchTickerButton.setImage(searchTicker);
 	}
-	
+
 	/**
 	 * Fetches the latest data for the given tickers and passes them off to create the grid.
 	 *
@@ -360,7 +470,13 @@ public class MainViewController implements Initializable {
 			@SuppressWarnings("unchecked")
 			Map<String, Double> priceChange = (Map<String, Double>) priceChangeAndTrades.getLast();
 
-			this.populateGrid(latestStockBars, priceChange);
+			// Ensure populateGrid runs on the FX thread; background updates can cause flaky
+			// input handling.
+			if (Platform.isFxApplicationThread()) {
+				this.populateGrid(latestStockBars, priceChange);
+			} else {
+				Platform.runLater(() -> this.populateGrid(latestStockBars, priceChange));
+			}
 		}
 	}
 }

@@ -29,6 +29,8 @@ public class UIUtils {
 	public static final String LIGHT_MODE_IMG = "/icons/settings-light-mode.png";
 	public static final String SEARCH_TICKER = "/icons/search-ticker.png";
 	public static final String DELETE_ICON = "/icons/delete.png";
+	public static final String FAVORITE_ICON_FILLED = "/icons/favorite-filled.png";
+	public static final String FAVORITE_ICON_OUTLINE = "/icons/favorite-outline.png";
 
 	public static final String DARK_MODE_BG = "appBackground";
 	public static final String LIGHT_MODE_BG = "appBackgroundLight";
@@ -36,6 +38,7 @@ public class UIUtils {
 	public static final String LIGHT_MODE_LABEL = "infoLabelsLight";
 	public static final String DARK_MODE_TEXTFIELD = "infoTextFields";
 	public static final String LIGHT_MODE_TEXTFIELD = "infoTextFieldsLight";
+	public static final int ICON_SIZE = 40;
 
 	public static final int API_KEY_LEN = 26;
 	public static final int API_SECRET_LEN = 44;
@@ -68,7 +71,7 @@ public class UIUtils {
 
 	/**
 	 * Shows the specified alert.
-	 * 
+	 *
 	 * @param title        The title of the alert window.
 	 * @param alertMessage The message to display in the alert window.
 	 * @param alertType    The type of alert to display.

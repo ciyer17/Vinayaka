@@ -6,6 +6,8 @@ import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -36,7 +38,31 @@ public class UserTickersService {
 		Sort order = Sort.by(Sort.Order.asc("symbol"));
 		return this.userTickersRepository.findAll(order);
 	}
-	
+
+	/**
+	 * Retrieves all tickers with favorites first, then non-favorites.
+	 * Within each group, tickers are sorted alphabetically by symbol.
+	 *
+	 * @return A list of all tickers sorted with favorites first.
+	 */
+	public List<UserTickers> getAllTickersWithFavoritesFirst() {
+		// Fetch favorited and non-favorited tickers separately
+		List<UserTickers> favorites = this.userTickersRepository.findAllByFavorite(true);
+		List<UserTickers> nonFavorites = this.userTickersRepository.findAllByFavorite(false);
+
+		// Sort each group alphabetically by symbol using Comparator
+		// Comparator.comparing() creates a comparator that compares UserTickers objects
+		// by extracting their symbol using the getSymbol() method reference
+		// The sort() method arranges the list in ascending alphabetical order
+		favorites.sort(Comparator.comparing(UserTickers::getSymbol));
+		nonFavorites.sort(Comparator.comparing(UserTickers::getSymbol));
+
+		// Combine the two lists: favorites first, then non-favorites
+		List<UserTickers> result = new ArrayList<>(favorites);
+		result.addAll(nonFavorites);
+		return result;
+	}
+
 	/**
 	 * Retrieves the ticker with the specified symbol.
 	 *
@@ -96,7 +122,23 @@ public class UserTickersService {
 	public void deleteTicker(String symbol) {
 		this.userTickersRepository.deleteById(symbol);
 	}
-	
+
+	/**
+	 * Toggles the favorite status of the ticker with the specified symbol.
+	 *
+	 * @param symbol The symbol of the ticker to toggle.
+	 * @return The updated ticker object, or null if the ticker doesn't exist.
+	 */
+	@Transactional
+	public UserTickers toggleFavorite(String symbol) {
+		UserTickers ticker = this.userTickersRepository.findById(symbol).orElse(null);
+		if (ticker != null) {
+			ticker.setFavorite(!ticker.isFavorite());
+			return this.userTickersRepository.save(ticker);
+		}
+		return null;
+	}
+
 	/**
 	 * Deletes all tickers stored by the user.
 	 */
