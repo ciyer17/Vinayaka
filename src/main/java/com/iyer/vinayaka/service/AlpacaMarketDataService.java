@@ -20,15 +20,15 @@ import java.util.stream.Collectors;
 public class AlpacaMarketDataService {
 	private final AlpacaAPI alpacaAPI;
 	private final AlpacaHistoricalBarsDataService historicalBarsDataService;
-	
+
 	private final String currency = "USD";
 	private final StockFeed feed = StockFeed.IEX;
-	
+
 	public AlpacaMarketDataService(AlpacaAPI api, AlpacaHistoricalBarsDataService dataService) {
 		this.alpacaAPI = api;
 		this.historicalBarsDataService = dataService;
 	}
-	
+
 	/**
 	 * Checks if the given API key and API secret are valid.
 	 *
@@ -41,10 +41,10 @@ public class AlpacaMarketDataService {
 		} catch (net.jacobpeterson.alpaca.openapi.trader.ApiException e) {
 			account = null;
 		}
-		
+
 		return account != null;
 	}
-	
+
 	/**
 	 * Gets all the valid assets tracked by the Alpaca Markets API.
 	 *
@@ -58,10 +58,10 @@ public class AlpacaMarketDataService {
 		} catch (net.jacobpeterson.alpaca.openapi.trader.ApiException e) {
 			System.out.println(e.getCode() + "\n" + e.getMessage());
 		}
-		
+
 		return assets;
 	}
-	
+
 	/**
 	 * Gets the latest stock quotes for the given tickers.
 	 *
@@ -83,10 +83,10 @@ public class AlpacaMarketDataService {
 		} catch (net.jacobpeterson.alpaca.openapi.marketdata.ApiException e) {
 			System.out.println(e.getCode() + "\n" + e.getMessage());
 		}
-		
+
 		return quotes;
 	}
-	
+
 	/**
 	 * Gets the latest stock quote for the given ticker.
 	 *
@@ -106,10 +106,10 @@ public class AlpacaMarketDataService {
 		} catch (net.jacobpeterson.alpaca.openapi.marketdata.ApiException e) {
 			System.out.println(e.getCode() + "\n" + e.getMessage());
 		}
-		
+
 		return quote;
 	}
-	
+
 	/**
 	 * Gets the latest stock trades for the given tickers.
 	 *
@@ -131,10 +131,10 @@ public class AlpacaMarketDataService {
 		} catch (net.jacobpeterson.alpaca.openapi.marketdata.ApiException e) {
 			System.out.println(e.getCode() + "\n" + e.getMessage());
 		}
-		
+
 		return trades;
 	}
-	
+
 	/**
 	 * Gets the latest stock trade for the given ticker.
 	 *
@@ -155,10 +155,10 @@ public class AlpacaMarketDataService {
 		} catch (net.jacobpeterson.alpaca.openapi.marketdata.ApiException e) {
 			System.out.println(e.getCode() + "\n" + e.getMessage());
 		}
-		
+
 		return trade;
 	}
-	
+
 	/**
 	 * Gets the name and exchange of the given ticker.
 	 *
@@ -174,16 +174,16 @@ public class AlpacaMarketDataService {
 		try {
 			Assets assets = this.alpacaAPI.trader().assets().
 					getV2AssetsSymbolOrAssetId(ticker);
-			
+
 			tickerNameAndExchange.put("officialName", assets.getName());
 			tickerNameAndExchange.put("listedExchange", assets.getExchange().getValue());
 		} catch (net.jacobpeterson.alpaca.openapi.trader.ApiException e) {
 			System.out.println(e.getCode() + "\n" + e.getMessage());
 		}
-		
+
 		return tickerNameAndExchange;
 	}
-	
+
 	/**
 	 * Gets the latest stock bar for the given ticker.
 	 *
@@ -204,24 +204,54 @@ public class AlpacaMarketDataService {
 		} catch (net.jacobpeterson.alpaca.openapi.marketdata.ApiException e) {
 			System.out.println(e.getCode() + "\n" + e.getMessage());
 		}
-		
+
 		return bar;
 	}
-	
+
 	/**
-	 * Gets the change percentage of the given tickers compared to the last trading day.
+	 * Retrieves the latest stock bars and price change percentages for the given
+	 * tickers.
 	 *
-	 * @param tickersToGetDataFor The tickers whose change percentage has to be calculated.
+	 * <p>
+	 * This is a convenience wrapper method that delegates to
+	 * {@link AlpacaHistoricalBarsDataService}
+	 * to calculate price changes relative to the previous trading day. It's the
+	 * primary method called
+	 * by {@link MainViewController} during ticker refresh cycles.
+	 * </p>
 	 *
-	 * @return An array list of map of the latest bars and the price change percentages. The first map
-	 * is a {@code Map<String, List<StockBar>>} which is the latest bars, and the second map is a
-	 * {@code Map<String, Double>} which is the price change percentages. Cast it accordingly.
-	 * If there's an error, an empty (array)list is returned.
+	 * <p>
+	 * <b>Return Structure:</b> Returns a list containing exactly 2 maps:
+	 * </p>
+	 * <ol>
+	 * <li>Index 0: {@code Map<String, List<StockBar>>} - Latest 1-minute bars for
+	 * each ticker</li>
+	 * <li>Index 1: {@code Map<String, Double>} - Price change percentages (rounded
+	 * to 2 decimals)</li>
+	 * </ol>
+	 *
+	 * <p>
+	 * <b>Usage Example:</b>
+	 * </p>
+	 * 
+	 * <pre>{@code
+	 * List<Map<String, ?>> result = service.getPriceChangePercentages(List.of("AAPL", "MSFT"));
+	 * Map<String, List<StockBar>> latestBars = (Map<String, List<StockBar>>) result.get(0);
+	 * Map<String, Double> priceChanges = (Map<String, Double>) result.get(1);
+	 * }</pre>
+	 *
+	 * @param tickersToGetDataFor List of ticker symbols to fetch data for (e.g.,
+	 *                            ["AAPL", "MSFT", "GOOGL"])
+	 *
+	 * @return A list with 2 elements: [0] = latest bars map, [1] = price change
+	 *         percentage map.
+	 *         Returns empty list if an error occurs or if market data cannot be
+	 *         fetched.
 	 */
 	public List<Map<String, ?>> getPriceChangePercentages(List<String> tickersToGetDataFor) {
 		return this.historicalBarsDataService.getLatestPriceChangePercentages(tickersToGetDataFor);
 	}
-	
+
 	/**
 	 * Gets the historical 1-day stock bars for the given ticker.
 	 *
@@ -233,7 +263,7 @@ public class AlpacaMarketDataService {
 	public List<StockBar> get1DHistoricalBars(String ticker) {
 		return historicalBarsDataService.get1DHistoricalStockBars(ticker);
 	}
-	
+
 	/**
 	 * Gets the historical 1-Week stock bars for the given ticker.
 	 *
@@ -245,7 +275,7 @@ public class AlpacaMarketDataService {
 	public List<StockBar> get1WHistoricalBars(String ticker) {
 		return historicalBarsDataService.get1WHistoricalBars(ticker);
 	}
-	
+
 	/**
 	 * Gets the historical 1-month stock bars for the given ticker.
 	 *
@@ -257,7 +287,7 @@ public class AlpacaMarketDataService {
 	public List<StockBar> get1MHistoricalBars(String ticker) {
 		return historicalBarsDataService.get1MHistoricalBars(ticker);
 	}
-	
+
 	/**
 	 * Gets the historical 3-month stock bars for the given ticker.
 	 *
@@ -269,7 +299,7 @@ public class AlpacaMarketDataService {
 	public List<StockBar> get3MHistoricalBars(String ticker) {
 		return historicalBarsDataService.get3MHistoricalBars(ticker);
 	}
-	
+
 	/**
 	 * Gets the historical 1-year stock bars for the given ticker.
 	 *
@@ -281,7 +311,7 @@ public class AlpacaMarketDataService {
 	public List<StockBar> get1YHistoricalBars(String ticker) {
 		return historicalBarsDataService.get1YHistoricalBars(ticker);
 	}
-	
+
 	/**
 	 * Gets the historical 5-year stock bars for the given ticker.
 	 *

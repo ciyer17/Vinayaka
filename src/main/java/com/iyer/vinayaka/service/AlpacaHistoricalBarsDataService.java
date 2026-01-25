@@ -18,8 +18,50 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * Service for fetching historical stock bar data and calculating price changes
+ * from the Alpaca Markets API.
+ *
+ * <p>
+ * This service is responsible for retrieving historical stock data at various
+ * timeframes
+ * and calculating price change percentages relative to previous trading days.
+ * It's a core component
+ * of the ticker refresh system, providing the data needed to display current
+ * prices and daily changes.
+ * </p>
+ *
+ * <p>
+ * <b>Key Features:</b>
+ * </p>
+ * <ul>
+ * <li>Market calendar caching to minimize API calls</li>
+ * <li>Intelligent trading day detection (handles pre-market, after-hours,
+ * weekends, holidays)</li>
+ * <li>NYC timezone-based time calculations for accurate market hours</li>
+ * <li>Multiple timeframe support (1D, 1W, 1M, 3M, 1Y, 5Y)</li>
+ * <li>15-minute delayed data compliance for real-time pricing</li>
+ * </ul>
+ *
+ * <p>
+ * <b>Timezone Handling:</b> All time calculations use NYC (America/New_York)
+ * timezone since
+ * US stock markets operate on Eastern Time. The {@link NYCTimeInfo} record
+ * bundles related time
+ * values to ensure consistency within a single method execution.
+ * </p>
+ *
+ * <p>
+ * <b>Thread Safety:</b> This service is a Spring singleton but methods are
+ * designed to be
+ * thread-safe. The cached market calendar is checked and updated atomically.
+ * </p>
+ *
+ * @see AlpacaMarketDataService
+ * @see TickerRefresher
+ */
 @Service
-class AlpacaHistoricalBarsDataService {
+public class AlpacaHistoricalBarsDataService {
 	private final AlpacaAPI alpacaAPI;
 
 	private final long historicalDataLimit = 10000;
@@ -92,18 +134,63 @@ class AlpacaHistoricalBarsDataService {
 	}
 
 	/**
-	 * Gets the change percentage of the given tickers compared to the last trading day.
+	 * Calculates price change percentages for the given tickers compared to the
+	 * previous trading day.
 	 *
-	 * @param tickersToGetDataFor The tickers whose change percentage has to be calculated.
+	 * <p>
+	 * Fetches 1-minute bars for both yesterday's close and today's latest prices,
+	 * then
+	 * calculates the percentage change.
+	 * </p>
 	 *
-	 * @return An array list of map of the latest bars and the price change percentages. The first map
-	 * is a {@code Map<String, List<StockBar>>} which is the latest bars, and the second map is a
-	 * {@code Map<String, Double>} which is the price change percentages. Cast it accordingly.
-	 * If there's an error, an empty (array)list is returned.
+	 * <p>
+	 * <b>Time Handling:</b> Intelligently handles different market states:
+	 * </p>
+	 * <ul>
+	 * <li><b>During market hours (9:45 AM - 4:15 PM NYC):</b> Compares current
+	 * price (15 min delayed)
+	 * with yesterday's close</li>
+	 * <li><b>After market close:</b> Compares today's close with yesterday's
+	 * close</li>
+	 * <li><b>Pre-market or non-trading days:</b> Compares most recent trading day
+	 * close with
+	 * previous trading day close</li>
+	 * </ul>
+	 *
+	 * <p>
+	 * <b>API Compliance:</b> Uses 15-minute delayed data during trading hours to
+	 * comply with
+	 * real-time data restrictions.
+	 * </p>
+	 *
+	 * <p>
+	 * <b>Data Format:</b> Returns a list with exactly 2 maps:
+	 * <ol>
+	 * <li>Index 0: {@code Map<String, List<StockBar>>} - Latest 1-minute bars for
+	 * each ticker</li>
+	 * <li>Index 1: {@code Map<String, Double>} - Price change percentages (rounded
+	 * to 2 decimals)</li>
+	 * </ol>
+	 *
+	 * <p>
+	 * <b>Error Handling:</b> If an API error occurs, returns an empty list. Logs
+	 * error details
+	 * to stderr.
+	 * </p>
+	 *
+	 * @param tickersToGetDataFor List of ticker symbols to fetch data for (e.g.,
+	 *                            ["AAPL", "MSFT"])
+	 *
+	 * @return A list containing two maps: [0] = latest bars, [1] = price change
+	 *         percentages.
+	 *         Returns empty list on error or if market calendar cannot be fetched.
+	 *         Tickers with missing data are excluded from the result maps.
 	 */
 	public List<Map<String, ?>> getLatestPriceChangePercentages(List<String> tickersToGetDataFor) {
 		NYCTimeInfo nycTime = this.getNYCTimeInfo();
 
+		// Default time window for fetching close price (3:59 PM - 4:00 PM).
+		// Used for previous day's close and for after-hours/pre-market scenarios.
 		LocalTime fromTime = LocalTime.of(15, 59, 0);
 		LocalTime toTime = LocalTime.of(16, 0, 0);
 
@@ -112,6 +199,10 @@ class AlpacaHistoricalBarsDataService {
 		Map<String, Double> priceChangePercentages;
 		List<Map<String, ?>> priceChangeAndTradesList = new ArrayList<>();
 		try {
+			// Get the two most recent trading days (handles weekends, holidays,
+			// pre-market).
+			// Returns [secondLastTradingDay, lastTradingDay] or null if calendar
+			// unavailable.
 			List<LocalDate> dates = this.getLastTwoTradingDays();
 			if (dates == null || dates.size() < 2) {
 				return priceChangeAndTradesList;
@@ -122,35 +213,42 @@ class AlpacaHistoricalBarsDataService {
 			LocalTime lastTradingDayFromTime;
 			LocalTime lastTradingDayEndTime;
 
+			// Determine the time window for "today's" price data based on market status.
+			// During market hours: use 15-min delayed data; otherwise use closing price.
 			if (lastTradingDay.equals(nycTime.today())) {
-				// All time comparisons now use NYC time
 				boolean isAfterMarketOpen = nycTime.time().isAfter(LocalTime.of(9, 45));
 				boolean isBeforeMarketClose = nycTime.time().isBefore(LocalTime.of(16, 15));
 
-				// Intraday information
+				// During market hours: fetch 15-min delayed data to comply with API
+				// restrictions.
 				if (isAfterMarketOpen && isBeforeMarketClose) {
 					lastTradingDayFromTime = nycTime.time().minusMinutes(16);
 					lastTradingDayEndTime = nycTime.time().minusMinutes(15);
 				} else {
+					// Pre-market or after-hours: use closing price window.
 					lastTradingDayFromTime = LocalTime.of(15, 59, 0);
 					lastTradingDayEndTime = LocalTime.of(16, 0, 0);
 				}
 			} else {
+				// Today is not a trading day (weekend/holiday): use closing price of last
+				// trading day.
 				lastTradingDayFromTime = LocalTime.of(15, 59, 0);
 				lastTradingDayEndTime = LocalTime.of(16, 0, 0);
 			}
 
+			// Build OffsetDateTime objects for the API calls.
 			OffsetDateTime lastTradingDayOffsetStartTime = OffsetDateTime.of(lastTradingDay, lastTradingDayFromTime,
 					nycTime.offset());
 			OffsetDateTime lastTradingDayOffsetEndTime = OffsetDateTime.of(lastTradingDay, lastTradingDayEndTime,
 					nycTime.offset());
 
-			// Set the time range for yesterday's data
+			// Yesterday's close is always fetched from the 3:59-4:00 PM window.
 			OffsetDateTime yesterdaysOffsetStartTime = OffsetDateTime.of(secondLastTradingDay, fromTime, nycTime.offset());
 			OffsetDateTime yesterdaysOffsetEndTime = OffsetDateTime.of(secondLastTradingDay, toTime, nycTime.offset());
 
 			String tickers = String.join(",", tickersToGetDataFor);
 
+			// Fetch 1-minute bars for both time periods in bulk (all tickers at once).
 			yesterdaysBars = this.alpacaAPI.marketData().stock().stockBars(tickers, "1Min", yesterdaysOffsetStartTime,
 					yesterdaysOffsetEndTime, this.historicalDataLimit, StockAdjustment.ALL, null, StockFeed.IEX,
 							this.currency, null, Sort.ASC).getBars();
@@ -159,21 +257,29 @@ class AlpacaHistoricalBarsDataService {
 					lastTradingDayOffsetEndTime, this.historicalDataLimit, StockAdjustment.ALL, null, StockFeed.IEX,
 							this.currency, null, Sort.ASC).getBars();
 
-			// The Stream API takes the keySet() (which returns a Set<String> in this case) for all the lambda operations.
+			// Calculate percentage change for each ticker using parallel streams.
+			// Filter out tickers with missing data to avoid NoSuchElementException.
 			priceChangePercentages = yesterdaysBars.keySet().parallelStream()
-					.filter(ticker -> yesterdaysBars.get(ticker) != null && !yesterdaysBars.get(ticker).isEmpty()
-							&& latestBars.get(ticker) != null)
+					.filter(ticker -> {
+						List<StockBar> yesterdayBars = yesterdaysBars.get(ticker);
+						List<StockBar> todayBars = latestBars.get(ticker);
+						return yesterdayBars != null && !yesterdayBars.isEmpty()
+								&& todayBars != null && !todayBars.isEmpty();
+					})
 					.collect(Collectors.toMap(
 							ticker -> ticker,
 							ticker -> {
+								// Get closing prices from the last bar in each period.
 								Double yesterdaysClose = yesterdaysBars.get(ticker).getLast().getC();
 								Double currentPrice = latestBars.get(ticker).getLast().getC();
 
+								// Formula: ((current - previous) / previous) * 100, rounded to 2 decimals.
 								return new BigDecimal(Double.toString(((currentPrice - yesterdaysClose) / yesterdaysClose) * 100))
 										.setScale(2, RoundingMode.HALF_UP).doubleValue();
 							}
 					));
 
+			// Return list: [0] = latest bars (for display), [1] = percentage changes.
 			priceChangeAndTradesList.add(latestBars);
 			priceChangeAndTradesList.add(priceChangePercentages);
 
