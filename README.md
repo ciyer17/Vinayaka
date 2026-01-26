@@ -1,43 +1,178 @@
 # Vinayaka
-A simple Java application for querying and managing stock tickers from NYSE, NASDAQ, and IEX exchanges using the Alpaca Markets API.
 
-## IMPORTANT
-- Currently, all listed data is 15-minute delayed due to assumption of usage of free Alpaca Markets accounts.
-- Data listed on Vinayaka is **NOT** intended to be used for any trading activity. I am **NOT** responsible for the result of *any* transaction that happens as a result of the data shown on Vinayaka. Data listed on Vinayaka is only intended for users who wish to casually check on the status of their favorite stocks, in a centralized location.
+A desktop stock ticker tracking application built with Spring Boot and JavaFX. Vinayaka enables users to monitor stock prices from NYSE, NASDAQ, and IEX exchanges using the Alpaca Markets API.
 
-## Setup
-Currently, the project is in active development. So a lot of stuff needs to be done manually. In the future, it will be much simpler than this.<br/>
+## Important Notice
 
-1. [Download] and install the Amazon Corretto JDK 21. Make sure to install the JDK and *not* the JRE.
-2. Install an IDE (preferably IntelliJ IDEA) of your choice.
-3. Install [MySQL] or [MySQL Workbench], login as the root user using the credentials you created during installation (in either the terminal or MySQL Workbench), and run the script setup.sql. You may change the default username and password to something of your choice if you wish to do so. <br/>
-You may refer to [this] link for MySQL Workbench method, and [this one] for the terminal method. Keep in mind that for the terminal method, you need to focus only on running the script.
-4. Clone and import the project into the IDE.
-5. Resolve all Maven dependencies.
-6. Now, in the application.properties file (inside the src/main/java/resources folder), replace the same existing lines with: <br>
-    spring.datasource.username=vinayaka<br/>
-    spring.datasource.password=vinayaka_108<br/><br/>
-If you would like to set the same using Run Configurations, enter the following in the environment variables section. You don't have to make any modifications to the application.properties file.:<br/>
-    MYSQL_USER=vinayaka<br/>
-    MYSQL_PASSWORD=vinayaka\_108<br/><br/>
-_If you used a different username and/or password, please input that username and/or password_
+- All market data displayed is subject to a 15-minute delay when using a free Alpaca Markets account.
+- Data provided by Vinayaka is intended for informational purposes only and is NOT suitable for trading decisions. The developers assume NO responsibility for any financial losses or transactions made based on information displayed in this application.
 
-7. You should be able to run the application now. Make sure that the MySQL Server that you installed is running in the background, otherwise the application will crash.
+## Features
 
-## Planned Features
-- Dedicated ticker window for each ticker showing a chart for 1D, 1W, 1M, 3M, 1Y, and 5Y historical bars.
-- Ability to sort by price percentage change, alphabetical order, and favorited status.
-- Ability to favorite tickers.
-- Delete tickers.
-- Implement a way to identify paid Alpaca Markets account users to get the latest data.
-- Options chain for tickers (not fully sure about this yet).
+### Ticker Management
 
-## Attribution
-Icons by [Icons8]. Thanks to them for offering great icons!
+- Add stock tickers from NYSE, NASDAQ, and IEX exchanges
+- Remove tickers with confirmation dialog
+- Mark tickers as favorites for prioritized display
+- Automatic sorting with favorites first, followed by alphabetical order
 
-[Download]: https://docs.aws.amazon.com/corretto/latest/corretto-21-ug/downloads-list.html
-[MySQL]: https://dev.mysql.com/downloads/mysql/
-[MySQL Workbench]: https://dev.mysql.com/downloads/workbench/
-[this]: https://www.tutorialspoint.com/how-to-run-sql-script-in-mysql
-[this one]: https://sebhastian.com/mysql-running-sql-file/
-[Icons8]: https://icons8.com/
+### Price Display
+
+- Real-time price updates with configurable refresh intervals (5, 10, 15, 30, or 60 seconds)
+- Daily price change percentage with color-coded indicators (green for gains, red for losses)
+- Intelligent market hours detection for accurate price calculations
+
+### User Interface
+
+- Dark and light mode toggle
+- Timezone selection from all available system timezones
+- Responsive grid layout for ticker display
+
+### Data Management
+
+- SQLite database with automatic initialization (no manual setup required)
+- Persistent storage of user preferences and ticker lists
+- Secure storage of Alpaca API credentials
+
+## Roadmap
+
+The following features are planned for future releases:
+
+- Dedicated ticker detail window with interactive price charts (1D, 1W, 1M, 3M, 1Y, 5Y timeframes)
+- Automatic detection of paid Alpaca Markets accounts for real-time data access
+- Options chain display for supported tickers
+
+## Prerequisites
+
+- **Java 21** or later (Amazon Corretto, Eclipse Temurin, or Oracle JDK recommended)
+- **Alpaca Markets Account** with API credentials
+  - Sign up at [https://alpaca.markets](https://alpaca.markets)
+  - Generate API keys from the dashboard
+
+**Note:** Use API keys from your LIVE Alpaca account. Paper Trading API keys are not supported. It may take Alpaca 2-5 days for verification.
+
+## Installation
+
+### Option 1: Run with Maven Wrapper (Recommended)
+
+Clone the repository and run using the included Maven wrapper:
+
+```bash
+git clone https://github.com/[username]/vinayaka.git
+cd vinayaka
+./mvnw spring-boot:run
+```
+
+On Windows:
+
+```cmd
+mvnw.cmd spring-boot:run
+```
+
+### Option 2: Build and Run JAR
+
+```bash
+./mvnw clean package
+java -jar target/vinayaka-0.0.1-SNAPSHOT.jar
+```
+
+### First Launch
+
+On first launch, Vinayaka will prompt for your Alpaca API credentials. Enter your API Key (26 characters) and API Secret (44 characters) from your Alpaca Markets dashboard.
+API credentials can be updated at any time through the Settings page. Credentials are validated against Alpaca's servers before being saved.
+
+The application automatically creates its database at:
+
+- **Linux/macOS:** `~/.config/vinayaka/vinayaka.db`
+- **Windows:** `%APPDATA%\Vinayaka\vinayaka.db`
+
+## Configuration
+
+Access settings through the gear icon in the main window:
+
+| Setting          | Description                              | Default          |
+|------------------|------------------------------------------|------------------|
+| Refresh Interval | Frequency of price updates (in seconds)  | 10               |
+| Dark Mode        | Toggle between dark and light themes     | Enabled          |
+| Timezone         | Timezone for time displays               | America/New_York |
+
+## Usage
+
+### Adding Tickers
+
+1. Enter a stock symbol in the search field at the top of the main window
+2. Click the search icon or press Enter
+3. The ticker will appear in the grid if it exists on supported exchanges
+
+### Managing Tickers
+
+- **Favorite:** Hover over a ticker and click the heart icon to toggle favorite status
+- **Delete:** Hover over a ticker and click the trash icon, then confirm deletion in the dialog
+
+### Viewing Prices
+
+Tickers display:
+
+- Current price (closing price or 15-minute delayed intraday price)
+- Daily percentage change from previous trading day close
+- Color coding: green indicates positive change, red indicates negative change
+
+## Building from Source
+
+### Requirements
+
+- Java 21 JDK
+- Maven 3.9+ (or use the included Maven wrapper)
+
+### Build Commands
+
+```bash
+# Compile and run tests
+./mvnw clean verify
+
+# Package as JAR
+./mvnw clean package
+
+# Run the application
+./mvnw spring-boot:run
+
+# Run with JavaFX Maven plugin
+./mvnw javafx:run
+```
+
+### IDE Setup
+
+Import the project as a Maven project. The following IDE configurations are recommended:
+
+- **IntelliJ IDEA:** Import as Maven project; enable annotation processing for Lombok
+- **Eclipse:** Install Lombok plugin; import as existing Maven project
+- **VS Code:** Install Extension Pack for Java and Lombok Annotations Support
+
+## Project Structure
+
+```
+src/main/java/com/iyer/vinayaka/
+├── config/          # Application configuration (database setup)
+├── controller/      # JavaFX controllers for UI views
+├── entities/        # JPA entities (UserSettings, UserTickers)
+├── events/          # Spring application events
+├── repository/      # Spring Data JPA repositories
+├── service/         # Business logic and API integration
+└── util/            # Utility classes and helpers
+
+src/main/resources/
+├── view/            # FXML layout files
+├── css/             # Application stylesheets
+├── icons/           # UI icons
+└── application.properties
+```
+
+## License
+
+This project is licensed under the GNU General Public License v3.0. See the [LICENSE](LICENSE) file for details.
+
+## Acknowledgments
+
+- Icons provided by [Icons8](https://icons8.com)
+- Market data provided by [Alpaca Markets](https://alpaca.markets)
+- Built with [Spring Boot](https://spring.io/projects/spring-boot) and [JavaFX](https://openjfx.io)
