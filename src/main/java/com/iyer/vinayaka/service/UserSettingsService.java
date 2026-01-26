@@ -2,6 +2,7 @@ package com.iyer.vinayaka.service;
 
 import com.iyer.vinayaka.entities.UserSettings;
 import com.iyer.vinayaka.repository.UserSettingsRepository;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +28,8 @@ public class UserSettingsService {
 	 * 	   database errors.
 	 */
 	@Transactional
+	@Nullable
+	@SuppressWarnings("null") // save() never returns null in Spring Data JPA
 	public UserSettings addUserSettings(UserSettings settings) {
 		if (this.getUserSettings().isEmpty()) {
 			return this.userSettingsRepository.save(settings);

@@ -2,8 +2,6 @@ package com.iyer.vinayaka.util;
 
 import org.springframework.stereotype.Component;
 
-import javafx.application.Platform;
-
 @Component
 public class ExitHandler {
 

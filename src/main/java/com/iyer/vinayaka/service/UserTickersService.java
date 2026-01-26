@@ -2,8 +2,10 @@ package com.iyer.vinayaka.service;
 
 import com.iyer.vinayaka.entities.UserTickers;
 import com.iyer.vinayaka.repository.UserTickersRepository;
+
 import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Sort;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -13,11 +15,11 @@ import java.util.List;
 @Service
 public class UserTickersService {
 	private final UserTickersRepository userTickersRepository;
-	
+
 	public UserTickersService(UserTickersRepository repository) {
 		this.userTickersRepository = repository;
 	}
-	
+
 	/**
 	 * Adds the specified ticker to the user's list of tickers.
 	 *
@@ -25,10 +27,11 @@ public class UserTickersService {
 	 * @return The saved ticker object.
 	 */
 	@Transactional
+	@SuppressWarnings("null") // save() never returns null in Spring Data JPA
 	public UserTickers addTicker(UserTickers ticker) {
 		return this.userTickersRepository.save(ticker);
 	}
-	
+
 	/**
 	 * Retrieves all symbols stored by the user in ascending order, sorted by symbol.
 	 *
@@ -70,10 +73,12 @@ public class UserTickersService {
 	 * @return The ticker object of the specified symbol, and null if the symbol doesn't exist
 	 * 			in the database.
 	 */
+	@Nullable
+	@SuppressWarnings("null") // symbol is validated by caller
 	public UserTickers getTicker(String symbol) {
 		return this.userTickersRepository.findById(symbol).orElse(null);
 	}
-	
+
 	/**
 	 * Retrieves all tickers that the user has favorited.
 	 *
@@ -82,7 +87,7 @@ public class UserTickersService {
 	public List<UserTickers> getFavoriteTickers() {
 		return this.userTickersRepository.findAllByFavorite(true);
 	}
-	
+
 	/**
 	 * Retrieves all tickers that the user has not favorited.
 	 *
@@ -91,7 +96,7 @@ public class UserTickersService {
 	public List<UserTickers> getNonFavoriteTickers() {
 		return this.userTickersRepository.findAllByFavorite(false);
 	}
-	
+
 	/**
 	 * Retrieves all tickers that are on the specified exchange.
 	 * Possible values: NYSE and NASDAQ
@@ -102,7 +107,7 @@ public class UserTickersService {
 	public List<UserTickers> getTickersByExchange(String exchange) {
 		return this.userTickersRepository.findAllByExchange(exchange);
 	}
-	
+
 	/**
 	 * Retrieves all tickers whose company name starts with the specified name.
 	 *
@@ -112,15 +117,17 @@ public class UserTickersService {
 	public List<UserTickers> getTickersByName(String name) {
 		return this.userTickersRepository.findAllByNameLike(name + "%");
 	}
-	
+
 	/**
 	 * Deletes the ticker with the specified symbol.
 	 *
 	 * @param symbol The symbol of the ticker to delete.
 	 */
 	@Transactional
-	public void deleteTicker(String symbol) {
-		this.userTickersRepository.deleteById(symbol);
+	public void deleteTicker(@Nullable String symbol) {
+		if (symbol != null) {
+			this.userTickersRepository.deleteById(symbol);
+		}
 	}
 
 	/**
@@ -130,6 +137,8 @@ public class UserTickersService {
 	 * @return The updated ticker object, or null if the ticker doesn't exist.
 	 */
 	@Transactional
+	@Nullable
+	@SuppressWarnings("null") // symbol is validated by caller, save() never returns null
 	public UserTickers toggleFavorite(String symbol) {
 		UserTickers ticker = this.userTickersRepository.findById(symbol).orElse(null);
 		if (ticker != null) {

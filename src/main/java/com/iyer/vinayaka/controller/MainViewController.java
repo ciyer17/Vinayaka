@@ -69,6 +69,7 @@ public class MainViewController implements Initializable {
 	 * Holds references to all UI components for a single ticker.
 	 * Enables in-place updates without recreating nodes.
 	 */
+	@SuppressWarnings("unused") // deleteIcon and infoBox are stored for structural completeness
 	private static class TickerUIComponents {
 		final StackPane container;
 		final Label nameLabel;
@@ -751,15 +752,12 @@ public class MainViewController implements Initializable {
 		// Keep icon visible during the operation to prevent hover interference
 		favoriteIcon.setVisible(true);
 
-		Tooltip tooltip = new Tooltip("");
-
 		// Toggle in database immediately
-		if (this.userTickersService.toggleFavorite(tickerSymbol).isFavorite()) {
-			tooltip.setText("Unfavorite");
-		} else {
-			tooltip.setText("Favorite");
+		UserTickers toggledTicker = this.userTickersService.toggleFavorite(tickerSymbol);
+		if (toggledTicker != null) {
+			Tooltip tooltip = new Tooltip(toggledTicker.isFavorite() ? "Unfavorite" : "Favorite");
+			Tooltip.install(favoriteIcon, tooltip);
 		}
-		Tooltip.install(favoriteIcon, tooltip);
 
 		// Brief pulse animation for visual feedback
 		FadeTransition pulse = new FadeTransition(Duration.millis(100), favoriteIcon);
