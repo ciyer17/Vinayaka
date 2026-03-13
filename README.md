@@ -58,7 +58,7 @@ The following features are planned for future releases:
 Clone the repository and run using the included Maven wrapper:
 
 ```bash
-git clone https://github.com/[username]/vinayaka.git
+git clone [https://github.com/ciyer17/Vinayaka.git](https://github.com/ciyer17/Vinayaka.git)
 cd vinayaka
 ./mvnw spring-boot:run
 ```
